@@ -11,5 +11,13 @@ python -c "import spacy; spacy.load('en_core_web_sm')" 2>/dev/null || {
 }
 echo "✓ spaCy model ready."
 
+# Run migrations
+echo "Running database migrations..."
+alembic upgrade head
+
+# Run data initialization
+echo "Initializing essential data..."
+python init_all.py
+
 # Hand off to the original container command
 exec "$@"
