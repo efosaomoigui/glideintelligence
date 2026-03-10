@@ -28,4 +28,5 @@ posthog>=3.5.0 # For potential analytics/logging if needed
 transformers>=4.36.0
 google-generativeai
 google-genai
+anthropic>=0.18.0
 reportlab>=4.0.0
