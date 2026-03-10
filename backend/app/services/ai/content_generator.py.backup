@@ -1,0 +1,451 @@
+from typing import Dict, List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.intelligence import CategoryConfig
+from app.models.settings import AIProvider
+import json
+import logging
+import time
+
+logger = logging.getLogger(__name__)
+
+class AIContentGenerator:
+    """Generate structured AI analysis using enabled AI providers.
+    
+    🐛 DEBUG VERSION: Prints full prompt and response for troubleshooting.
+    """
+    
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self._cost_tracking_enabled = True
+        self._tokens_used = 0
+        self._provider_used = None
+    
+    async def _get_enabled_providers(self) -> List[AIProvider]:
+        """Fetch enabled AI providers ordered by priority."""
+        result = await self.db.execute(
+            select(AIProvider)
+            .where(AIProvider.enabled == True)
+            .order_by(AIProvider.priority.desc())
+        )
+        return result.scalars().all()
+    
+    async def _call_ai_provider(
+        self,
+        provider: AIProvider,
+        prompt: str,
+        max_tokens: int = 2000,
+        timeout_seconds: int = 60
+    ) -> str:
+        """Call specific AI provider with prompt and timeout protection."""
+        import asyncio
+        
+        try:
+            async def _make_call():
+                if provider.name.lower() in ["gemini", "google"]:
+                    from app.services.ai.gemini_service import GeminiService
+                    service = GeminiService()
+                    return service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
+                
+                elif provider.name.lower() in ["claude", "anthropic"]:
+                    from app.services.ai.claude_service import ClaudeService
+                    service = ClaudeService(api_key=provider.api_key)
+                    return service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
+                
+                elif provider.name.lower() == "openai":
+                    from app.services.ai.openai_service import OpenAIService
+                    service = OpenAIService(api_key=provider.api_key)
+                    return service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
+                
+                elif provider.name.lower() == "ollama":
+                    from app.services.ai.ollama_service import ollama_service
+                    
+                    logger.info(f"Using Ollama provider with model: {provider.model}")
+                    
+                    if not ollama_service.is_available():
+                        raise Exception("Ollama service is not available")
+                    
+                    messages = [{"role": "user", "content": prompt}]
+                    response = ollama_service.chat(
+                        model=provider.model,
+                        messages=messages,
+                        temperature=0.3,
+                        max_tokens=max_tokens
+                    )
+                    return response
+                
+                elif provider.name.lower() in ["local", "bart", "local (bart)"]:
+                    from app.services.ai.local_inference import local_inference
+                    logger.info(f"Using local BART model for generation")
+                    summary = local_inference.generate_summary(prompt, max_length=500)
+                    return summary
+                
+                else:
+                    raise ValueError(f"Unsupported provider: {provider.name}")
+            
+            response = await asyncio.wait_for(_make_call(), timeout=timeout_seconds)
+            self._provider_used = provider.name
+            
+            # Estimate tokens
+            self._tokens_used += len(prompt.split()) * 1.3 + len(response.split()) * 1.3
+            
+            return response
+        
+        except asyncio.TimeoutError:
+            logger.error(f"Provider {provider.name} timed out after {timeout_seconds}s")
+            raise Exception(f"Timeout after {timeout_seconds}s")
+        
+        except Exception as e:
+            logger.error(f"Provider {provider.name} failed: {e}")
+            raise
+    
+    def _extract_json(self, content: str) -> str:
+        """Extract JSON from content using regex patterns."""
+        import re
+        
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        content = content.strip()
+        
+        if not (content.startswith("{") or content.startswith("[")):
+            match_array = re.search(r'\[.*\]', content, re.DOTALL)
+            match_object = re.search(r'\{.*\}', content, re.DOTALL)
+            
+            if match_array and match_object:
+                if match_array.start() < match_object.start():
+                    content = match_array.group(0)
+                else:
+                    content = match_object.group(0)
+            elif match_array:
+                content = match_array.group(0)
+            elif match_object:
+                content = match_object.group(0)
+                
+        return content
+    
+    async def generate_complete_analysis(
+        self,
+        topic_title: str,
+        topic_content: str,
+        category_config: CategoryConfig,
+        sources: List[Dict],
+        timeout_seconds: int = 90
+    ) -> Dict:
+        """
+        🚀 OPTIMIZED: Generate ALL 4 components in ONE API call.
+        🐛 DEBUG VERSION: Prints full prompt and response.
+        """
+        
+        print("\n" + "="*80)
+        print(f"🚀 OPTIMIZED ANALYSIS STARTING: {topic_title[:60]}...")
+        print("="*80)
+        
+        start_time = time.time()
+        
+        # Build the unified prompt
+        prompt = self._build_unified_prompt(
+            topic_title,
+            category_config.category,
+            topic_content,
+            sources,
+            category_config
+        )
+        
+        # 🐛 DEBUG: Print the actual prompt being sent
+        print("\n" + "─"*80)
+        print("📤 PROMPT BEING SENT TO AI:")
+        print("─"*80)
+        print(prompt)
+        print("─"*80)
+        print(f"Prompt length: {len(prompt)} chars, ~{len(prompt.split())} words")
+        print()
+        
+        # Try enabled providers with fallback
+        providers = await self._get_enabled_providers()
+        
+        if not providers:
+            print("❌ ERROR: No enabled AI providers found in database!")
+            print("   Check: SELECT * FROM ai_providers WHERE enabled = true;")
+            raise Exception("No enabled AI providers")
+        
+        print(f"📋 Available providers: {[p.name for p in providers]}")
+        
+        last_error = None
+        
+        for provider in providers:
+            try:
+                print(f"\n🔄 Attempting with provider: {provider.name} ({provider.model})")
+                
+                content = await self._call_ai_provider(
+                    provider, 
+                    prompt, 
+                    max_tokens=4000,
+                    timeout_seconds=timeout_seconds
+                )
+                
+                # 🐛 DEBUG: Print the raw response
+                print("\n" + "─"*80)
+                print("📥 RAW AI RESPONSE:")
+                print("─"*80)
+                print(content[:2000])  # Print first 2000 chars
+                if len(content) > 2000:
+                    print(f"\n... (truncated, total length: {len(content)} chars)")
+                print("─"*80)
+                print()
+                
+                # Parse JSON response
+                print("🔧 Extracting JSON...")
+                extracted = self._extract_json(content)
+                
+                print("🔧 Parsing JSON...")
+                result = json.loads(extracted)
+                
+                # 🐛 DEBUG: Print the parsed structure
+                print("\n" + "─"*80)
+                print("✅ PARSED RESULT STRUCTURE:")
+                print("─"*80)
+                print(f"sentiment_breakdown: {len(result.get('sentiment_breakdown', []))} items")
+                if result.get('sentiment_breakdown'):
+                    for i, item in enumerate(result['sentiment_breakdown'][:3], 1):
+                        print(f"  {i}. {item.get('dimension_type')}: {item.get('dimension_value')} = {item.get('sentiment')} ({item.get('sentiment_score')})")
+                    if len(result['sentiment_breakdown']) > 3:
+                        print(f"  ... and {len(result['sentiment_breakdown']) - 3} more")
+                
+                print(f"\nsource_perspectives: {len(result.get('source_perspectives', []))} items")
+                if result.get('source_perspectives'):
+                    for i, item in enumerate(result['source_perspectives'][:3], 1):
+                        print(f"  {i}. {item.get('source_name')}: {item.get('frame_label')} ({item.get('sentiment_percentage')})")
+                
+                print(f"\nregional_impacts: {len(result.get('regional_impacts', []))} items")
+                if result.get('regional_impacts'):
+                    for i, item in enumerate(result['regional_impacts'][:3], 1):
+                        print(f"  {i}. {item.get('impact_category')}: {item.get('value')[:60]}...")
+                
+                print(f"\nintelligence_card: {'✓ present' if result.get('intelligence_card') else '✗ missing'}")
+                if result.get('intelligence_card'):
+                    card = result['intelligence_card']
+                    print(f"  Title: {card.get('title')}")
+                    print(f"  Description: {card.get('description')}")
+                print("─"*80)
+                print()
+                
+                # Validate structure
+                required_keys = ['sentiment_breakdown', 'source_perspectives', 'regional_impacts', 'intelligence_card']
+                missing = [k for k in required_keys if k not in result]
+                
+                if missing:
+                    print(f"❌ VALIDATION FAILED: Missing keys: {missing}")
+                    raise ValueError(f"Response missing keys: {missing}")
+                
+                if len(result['sentiment_breakdown']) < 2:
+                    print(f"❌ VALIDATION FAILED: sentiment_breakdown has only {len(result['sentiment_breakdown'])} items (need at least 2)")
+                    raise ValueError("sentiment_breakdown has < 2 items")
+                
+                if len(result['regional_impacts']) < 2:
+                    print(f"❌ VALIDATION FAILED: regional_impacts has only {len(result['regional_impacts'])} items (need at least 2)")
+                    raise ValueError("regional_impacts has < 2 items")
+                
+                print("✅ VALIDATION PASSED")
+                
+                # Add metadata
+                result['provider_used'] = provider.name
+                result['tokens_used'] = int(self._tokens_used)
+                
+                duration = time.time() - start_time
+                
+                print("\n" + "="*80)
+                print(f"✅ ANALYSIS COMPLETE")
+                print(f"   Provider: {provider.name}")
+                print(f"   Tokens: {int(self._tokens_used)}")
+                print(f"   Duration: {duration:.2f}s")
+                print("="*80 + "\n")
+                
+                return result
+            
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON PARSE ERROR: {e}")
+                print(f"   Failed at position: {e.pos}")
+                print(f"   Context: ...{e.doc[max(0, e.pos-50):e.pos+50]}...")
+                last_error = e
+                continue
+            
+            except Exception as e:
+                error_msg = str(e)
+                print(f"❌ PROVIDER FAILED: {error_msg}")
+                
+                if '429' in error_msg or 'quota' in error_msg.lower():
+                    print(f"   ⚠️  Provider {provider.name} hit QUOTA LIMIT - trying next provider")
+                
+                last_error = e
+                continue
+        
+        # All providers failed
+        print("\n" + "="*80)
+        print("❌ ALL PROVIDERS FAILED")
+        print(f"   Last error: {last_error}")
+        print("="*80 + "\n")
+        raise Exception(f"All AI providers failed. Last error: {last_error}")
+    
+    def _build_unified_prompt(
+        self,
+        topic_title: str,
+        category: str,
+        topic_content: str,
+        sources: List[Dict],
+        category_config: CategoryConfig
+    ) -> str:
+        """Build a single comprehensive prompt requesting all 4 components."""
+        
+        # Format dimensions
+        dimension_list = []
+        dimensions = category_config.dimension_mappings.get("primary_dimensions", [])
+        for dim_type in dimensions:
+            options_key = f"{dim_type}_options"
+            if options_key in category_config.dimension_mappings:
+                options = category_config.dimension_mappings[options_key][:8]
+                dimension_list.append(f"{dim_type}: {', '.join(options)}")
+        
+        # Format sources
+        sources_text = "\n".join([
+            f"SOURCE {i+1}: {s.get('name', 'Unknown')} ({s.get('type', 'unknown')})\n{s.get('headline', '')}"
+            for i, s in enumerate(sources[:5])
+        ])
+        
+        # Format impact categories
+        impact_categories = category_config.impact_categories
+        impact_text = "\n".join([
+            f"- {cat.get('key')}: {cat.get('label')} {cat.get('icon')}"
+            for cat in impact_categories[:6]
+        ])
+        
+        prompt = f'''You are analyzing a {category} news topic for an intelligence platform.
+
+═══════════════════════════════════════════════════════════════
+TOPIC INFORMATION
+═══════════════════════════════════════════════════════════════
+Title: "{topic_title}"
+Category: {category}
+
+News Content:
+{topic_content[:1800]}...
+
+Sources:
+{sources_text}
+
+═══════════════════════════════════════════════════════════════
+YOUR TASK: Generate COMPLETE INTELLIGENCE ANALYSIS
+═══════════════════════════════════════════════════════════════
+
+You must provide ALL FOUR components below in a single JSON response.
+
+COMPONENT 1 — SENTIMENT BREAKDOWN
+Analyze sentiment across these {category}-specific dimensions:
+{chr(10).join(dimension_list)}
+
+For EACH dimension type, select 2-3 most relevant values and provide:
+- sentiment: "positive", "negative", "neutral", or "mixed"
+- sentiment_score: Float from -1.0 to +1.0
+- percentage: Coverage % (should roughly sum to 100% per dimension type)
+- icon: Appropriate emoji
+- description: One sentence (max 120 chars)
+
+COMPONENT 2 — SOURCE PERSPECTIVES
+For each source above, determine:
+- frame_label: 2-4 word framing angle (e.g., "Economic Optimism")
+- sentiment: Overall sentiment of their framing
+- sentiment_percentage: Deviation from neutral (e.g., "+48%", "-23%")
+- key_narrative: One sentence capturing their angle (max 120 chars)
+
+COMPONENT 3 — REGIONAL IMPACTS
+Select 3-4 most relevant impact categories from:
+{impact_text}
+
+For each, provide:
+- impact_category: The key from the list above
+- icon: The emoji from the list
+- title: The label from the list
+- value: SPECIFIC, CONCRETE impact (MUST use numbers/amounts/timeframes)
+- severity: "low", "medium", "high", or "critical"
+- context: Why this matters (max 150 chars)
+
+CRITICAL: Values must be CONCRETE. Examples:
+✓ "₦2.3T market capitalization at risk"
+✓ "Supreme Court case likely within 6 months"
+✗ "Significant impact expected" (too vague)
+
+COMPONENT 4 — INTELLIGENCE CARD
+Create a homepage card with:
+- category: "{category}"
+- icon: Appropriate emoji for this category
+- title: 3-6 words, punchy and specific
+- description: One sentence (max 15 words)
+- trend_percentage: Estimate change (e.g., "+12%", "-8%")
+- is_positive: true or false
+
+═══════════════════════════════════════════════════════════════
+REQUIRED OUTPUT FORMAT
+═══════════════════════════════════════════════════════════════
+
+Return ONLY this exact JSON structure (no markdown):
+
+{{
+  "sentiment_breakdown": [
+    {{
+      "dimension_type": "sector",
+      "dimension_value": "Banking",
+      "sentiment": "positive",
+      "sentiment_score": 0.65,
+      "percentage": 35.2,
+      "icon": "🏦",
+      "description": "Banks welcome stability"
+    }}
+  ],
+  "source_perspectives": [
+    {{
+      "source_name": "The Guardian",
+      "source_type": "mainstream",
+      "frame_label": "Economic Optimism",
+      "sentiment": "positive",
+      "sentiment_percentage": "+48%",
+      "key_narrative": "Emphasizes reserve growth"
+    }}
+  ],
+  "regional_impacts": [
+    {{
+      "impact_category": "market_impact",
+      "icon": "📊",
+      "title": "Market Impact",
+      "value": "₦2.3T market cap affected",
+      "severity": "high",
+      "context": "18% of total market"
+    }}
+  ],
+  "intelligence_card": {{
+    "category": "{category}",
+    "icon": "💹",
+    "title": "Interest Rates Hold Steady",
+    "description": "CBN maintains rate amid concerns",
+    "trend_percentage": "+12%",
+    "is_positive": true
+  }}
+}}
+
+Return ONLY the JSON, no other text.'''
+
+        return prompt
+    
+    # Legacy methods omitted for brevity - same as before
+    async def generate_sentiment_breakdown(self, *args, **kwargs):
+        raise NotImplementedError("Use generate_complete_analysis() instead")
+    
+    async def generate_source_perspectives(self, *args, **kwargs):
+        raise NotImplementedError("Use generate_complete_analysis() instead")
+    
+    async def generate_regional_impacts(self, *args, **kwargs):
+        raise NotImplementedError("Use generate_complete_analysis() instead")
+    
+    async def generate_intelligence_card(self, *args, **kwargs):
+        raise NotImplementedError("Use generate_complete_analysis() instead")

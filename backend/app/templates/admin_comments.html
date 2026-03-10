@@ -1,0 +1,80 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Comments | Glide Intelligence{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-4">
+    <h1>Community Comments</h1>
+</div>
+
+<div class="card mb-4" style="padding: 16px 24px;">
+    <form method="GET" action="/admin/comments" class="flex gap-4" style="align-items: center;">
+        <div style="flex: 2;">
+            <label class="form-label" style="margin-bottom: 4px;">Search Topic Title</label>
+            <input type="text" name="search" value="{{ search_query }}" placeholder="e.g. Economy, Central Bank..." class="form-control" style="padding: 8px;">
+        </div>
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn">Search Topics</button>
+            <a href="/admin/comments" class="btn btn-outline" style="margin-left: 8px;">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Topics with Discussion</h2>
+    </div>
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Topic Focus</th>
+                    <th style="width: 15%;">Category</th>
+                    <th style="width: 15%;">Created</th>
+                    <th style="width: 10%; text-align: center;">Comments</th>
+                    <th style="width: 15%; text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for topic in topics %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 500;">{{ topic.title }}</div>
+                    </td>
+                    <td><span class="badge badge-blue">{{ topic.category }}</span></td>
+                    <td class="text-muted">{{ topic.created_at.strftime('%Y-%m-%d') if topic.created_at else 'Unknown' }}</td>
+                    <td style="text-align: center; font-weight: 600;">
+                        {{ topic.comment_count }}
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="/admin/comments/topic/{{ topic.id }}" class="btn btn-sm btn-outline">View Thread</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 48px;">
+                        No topics with comments found. Try modifying your search.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex-between" style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
+        <div class="text-sm text-muted">
+            Showing page {{ page }} of {{ total_pages }} ({{ total }} total active topics)
+        </div>
+        <div class="flex gap-2">
+            {% if has_prev %}
+                <a href="?page={{ page - 1 }}&search={{ search_query }}" class="btn btn-sm btn-outline">Previous</a>
+            {% endif %}
+            {% if has_next %}
+                <a href="?page={{ page + 1 }}&search={{ search_query }}" class="btn btn-sm btn-outline">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

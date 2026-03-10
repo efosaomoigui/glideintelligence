@@ -1,0 +1,187 @@
+{% extends "admin_base.html" %}
+
+{% block title %}
+    {% if is_edit %}Edit Ad: {{ ad.title }}{% else %}Create New Ad{% endif %} | Glide Intelligence
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    .type-section { display: none; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .type-section.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/admin/ads" class="btn btn-outline btn-sm" style="margin-bottom: 16px;">&larr; Back to Ads</a>
+    <h1>{% if is_edit %}Edit Ad{% else %}Create New Ad{% endif %}</h1>
+</div>
+
+<form method="POST" action="{% if is_edit %}/admin/ads/edit/{{ ad.id }}{% else %}/admin/ads/create{% endif %}">
+    <div class="card mb-4">
+        <h2>General Information</h2>
+        
+        <div class="grid grid-2">
+            <div>
+                <label class="form-label">Ad Title / Internal Name</label>
+                <input type="text" name="title" class="form-control" value="{{ ad.title if ad else '' }}" required>
+            </div>
+            <div>
+                <label class="form-label">Ad Type (Crucial)</label>
+                <select name="ad_type" id="adTypeSelect" class="form-control" {% if is_edit %}disabled{% endif %} required>
+                    <option value="" disabled selected>Select Type</option>
+                    <option value="external" {% if ad and ad.ad_type == 'external' %}selected{% endif %}>External Network (AdSense, Scripts)</option>
+                    <option value="sponsor" {% if ad and ad.ad_type == 'sponsor' %}selected{% endif %}>Sponsored Content (Native Card)</option>
+                    <option value="image" {% if ad and ad.ad_type == 'image' %}selected{% endif %}>Image Banner (Custom Image Link)</option>
+                </select>
+                {% if is_edit %}
+                    <input type="hidden" name="ad_type" value="{{ ad.ad_type }}">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-3 mt-4">
+            <div>
+                <label class="form-label">Placement Group</label>
+                <input type="text" name="placement_group" class="form-control" value="{{ ad.placement_group if ad else 'homepage_feed' }}" placeholder="e.g. homepage_feed">
+                <small class="text-xs text-muted">Usually 'homepage_feed'</small>
+            </div>
+            <div>
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="active" {% if ad and ad.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="paused" {% if ad and ad.status == 'paused' %}selected{% endif %}>Paused</option>
+                    <option value="archived" {% if ad and ad.status == 'archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Rotation Priority (Higher = more frequent)</label>
+                <input type="number" name="priority" class="form-control" value="{{ ad.priority if ad else 0 }}">
+            </div>
+        </div>
+        
+        <div class="grid grid-2 mt-4">
+            <div>
+                <label class="form-label">CPM Value ($) - Revenue per 1000 views</label>
+                <input type="number" step="0.01" name="cpm_value" class="form-control" value="{{ ad.cpm_value if ad else 0.0 }}">
+            </div>
+            <div>
+                <label class="form-label">CPC Value ($) - Revenue per click</label>
+                <input type="number" step="0.01" name="cpc_value" class="form-control" value="{{ ad.cpc_value if ad else 0.0 }}">
+            </div>
+        </div>
+        
+        <!-- EXTERNAL SECTION -->
+        <div id="section_external" class="type-section {% if ad and ad.ad_type == 'external' %}active{% endif %}">
+            <h2>External Network Configuration</h2>
+            <div class="grid grid-2">
+                <div>
+                    <label class="form-label">Network Name (e.g., Google AdSense)</label>
+                    <input type="text" name="ext_network_name" class="form-control" value="{{ ad.external.network_name if (ad and ad.external) else '' }}">
+                </div>
+                <div>
+                    <label class="form-label">Ad Container Size Constraints</label>
+                    <input type="text" name="ext_ad_size" class="form-control" value="{{ ad.external.ad_size if (ad and ad.external) else '' }}" placeholder="e.g. 100% x 250px or 'responsive'">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="form-label">Script Code</label>
+                <textarea name="ext_script_code" class="form-control" rows="5" placeholder="<script async src='...'></script>">{{ ad.external.script_code if (ad and ad.external) else '' }}</textarea>
+                <small class="text-xs text-muted" style="display:block; margin-top: 4px;">Paste the exact HTML/JS snippet provided by the network.</small>
+            </div>
+        </div>
+        
+        <!-- SPONSOR SECTION -->
+        <div id="section_sponsor" class="type-section {% if ad and ad.ad_type == 'sponsor' %}active{% endif %}">
+            <h2>Sponsored Native Content Configuration</h2>
+            <div class="grid grid-2">
+                <div>
+                    <label class="form-label">Tagline (appears as badge text or subtitle)</label>
+                    <input type="text" name="sponsor_tagline" class="form-control" value="{{ ad.sponsor.tagline if (ad and ad.sponsor) else 'Sponsored Insight' }}">
+                </div>
+                <div>
+                    <label class="form-label">Cover Image URL</label>
+                    <input type="url" name="sponsor_image_url" class="form-control" value="{{ ad.sponsor.image_url if (ad and ad.sponsor) else '' }}">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="form-label">Card Summary (Brief summary for the card view)</label>
+                <textarea name="sponsor_summary" class="form-control" rows="3">{{ ad.sponsor.summary if (ad and ad.sponsor) else '' }}</textarea>
+            </div>
+            <div class="mt-4">
+                <label class="form-label">Full Content (Markdown/HTML shown inside Detail Flyout)</label>
+                <textarea name="sponsor_full_content" class="form-control" rows="8">{{ ad.sponsor.full_content if (ad and ad.sponsor) else '' }}</textarea>
+            </div>
+            <div class="grid grid-2 mt-4">
+                <div>
+                    <label class="form-label">CTA Text (Button inside flyout, e.g. "Visit Sponsor")</label>
+                    <input type="text" name="sponsor_cta_text" class="form-control" value="{{ ad.sponsor.cta_text if (ad and ad.sponsor) else 'Learn More' }}">
+                </div>
+                <div>
+                    <label class="form-label">Website Link / Destination URL</label>
+                    <input type="url" name="sponsor_website_link" class="form-control" value="{{ ad.sponsor.website_link if (ad and ad.sponsor) else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- IMAGE SECTION -->
+        <div id="section_image" class="type-section {% if ad and ad.ad_type == 'image' %}active{% endif %}">
+            <h2>Image Banner Configuration</h2>
+            <div class="grid grid-2">
+                <div>
+                    <label class="form-label">Image URL</label>
+                    <input type="url" name="img_url" class="form-control" value="{{ ad.image.image_url if (ad and ad.image) else '' }}">
+                </div>
+                <div>
+                    <label class="form-label">Target URL (On Click)</label>
+                    <input type="url" name="img_target" class="form-control" value="{{ ad.image.target_url if (ad and ad.image) else '' }}">
+                </div>
+            </div>
+            <div class="grid grid-2 mt-4">
+                <div>
+                    <label class="form-label">Alt Text (Accessibility)</label>
+                    <input type="text" name="img_alt" class="form-control" value="{{ ad.image.alt_text if (ad and ad.image) else '' }}">
+                </div>
+                <div>
+                    <label class="form-label">Ad Banner Size</label>
+                    <input type="text" name="img_size" class="form-control" value="{{ ad.image.ad_size if (ad and ad.image) else '' }}" placeholder="e.g. 728x90">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card bg-gray-900 border-none flex-between">
+        {% if is_edit %}
+            <a href="/admin/ads/delete/{{ ad.id }}" class="btn btn-danger" onclick="return confirm('Are you sure you want to permanently delete this ad? This action cannot be undone.');">Delete Ad</a>
+        {% else %}
+            <div></div> <!-- Spacer -->
+        {% endif %}
+        <div>
+            <a href="/admin/ads" class="btn btn-outline" style="margin-right: 12px;">Cancel</a>
+            <button type="submit" class="btn">Save Ad Configuration</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const typeSelect = document.getElementById('adTypeSelect');
+        const sections = document.querySelectorAll('.type-section');
+
+        typeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            sections.forEach(section => {
+                if (section.id === 'section_' + selectedType) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

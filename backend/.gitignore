@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+env/
+.idea/
+.vscode/
+coverage/
+htmlcov/
+dist/
+build/
+*.egg-info/
+.DS_Store
+*.log
+celerybeat-schedule

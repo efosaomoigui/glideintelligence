@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin | Glide Intelligence{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --sidebar-bg: #1e293b;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --sidebar-width: 260px;
+            --topbar-height: 64px;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 50;
+            overflow-y: auto;
+        }
+        
+        .logo-area {
+            padding: 0 12px 24px 12px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+        .logo-text { font-size: 1.25rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+        .logo-sub { font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+        .nav-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #f87171;
+            margin-bottom: 8px;
+            padding-left: 12px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: #fff;
+        }
+        .nav-link.active {
+            background: var(--primary);
+        }
+        
+        /* Layout Structure */
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: var(--topbar-height);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px; /* Aligns with main content padding */
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+        
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+        .status-dot { width: 8px; height: 8px; background: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .env-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2563eb;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 40px 60px; /* Increased side padding per user request */
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        /* Headings */
+        h1 { font-weight: 600; color: var(--text); margin-top: 0; margin-bottom: 24px; font-size: 1.875rem; }
+        h2 { font-weight: 600; color: var(--text); margin-top: 0; margin-bottom: 16px; font-size: 1.25rem; }
+
+        /* Shared Component Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        .card-header h2 { margin: 0; border: none; padding: 0; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 16px; color: var(--text-muted); font-weight: 500; font-size: 0.875rem; border-bottom: 1px solid var(--border); }
+        td { padding: 16px; border-bottom: 1px solid var(--border); color: var(--text); font-size: 0.95rem; }
+        tr:last-child td { border-bottom: none; }
+        
+        /* Grid */
+        .grid { display: grid; gap: 24px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .grid-5 { grid-template-columns: repeat(5, 1fr); }
+        
+        /* Utilities */
+        .flex { display: flex; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .flex-end { display: flex; justify-content: flex-end; }
+        .gap-2 { gap: 8px; }
+        .gap-4 { gap: 16px; }
+        .mt-4 { margin-top: 16px; }
+        .mb-4 { margin-bottom: 16px; }
+        .text-sm { font-size: 0.875rem; }
+        .text-muted { color: var(--text-muted); }
+        
+        /* Buttons & Badges */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .badge-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        
+        /* Forms */
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: inherit;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .form-label { display: block; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-muted); font-weight: 500; }
+        
+        @media (max-width: 1024px) {
+            .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .main-content { padding: 30px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar.open { transform: translateX(0); }
+            .wrapper { margin-left: 0; width: 100%; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-text">Glide Intelligence</div>
+            <div class="logo-sub">Control Center</div>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                <span>Analytics</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Content Operations</div>
+            <a href="/admin/sources-ui" class="nav-link {% if active_page == 'sources' %}active{% endif %}">
+                <span>News Sources</span>
+            </a>
+            <a href="/admin/pipeline" class="nav-link {% if active_page == 'pipeline' %}active{% endif %}">
+                <span>Content Pipeline</span>
+            </a>
+            <a href="/admin/polls" class="nav-link {% if active_page == 'polls' %}active{% endif %}">
+                <span>Polls</span>
+            </a>
+            <a href="/admin/comments" class="nav-link {% if active_page == 'comments' %}active{% endif %}">
+                <span>Comments</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Ad Management</div>
+            <a href="/admin/ads" class="nav-link {% if active_page == 'ads' %}active{% endif %}">
+                <span>Ads Manager</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">System & AI</div>
+            <a href="/admin/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}">
+                <span>AI Providers</span>
+            </a>
+             <a href="/admin/usage" class="nav-link {% if active_page == 'usage' %}active{% endif %}">
+                <span>AI Usage & Costs</span>
+            </a>
+             <a href="/admin/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}">
+                <span>Logs & Errors</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Access</div>
+            <a href="/admin/users-ui" class="nav-link {% if active_page == 'users' %}active{% endif %}">
+                <span>Users & Roles</span>
+            </a>
+        </div>
+        
+        <div style="margin-top: auto;">
+             <a href="/admin/logout" class="nav-link" style="color: #f87171;">
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="wrapper">
+        <header class="topbar">
+            <!-- Left side could have breadcrumbs or search in future -->
+            <div class="env-badge">DEV ENV</div>
+            
+            <div class="user-menu">
+                <div class="system-status">
+                    <div class="status-dot"></div>
+                    System Operational
+                </div>
+                <div style="height: 24px; width: 1px; background: var(--border);"></div>
+                <div style="font-weight: 500; font-size: 0.9rem;">{{ user.email if user else 'Admin' }}</div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

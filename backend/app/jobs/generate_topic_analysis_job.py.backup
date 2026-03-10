@@ -1,0 +1,398 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
+from app.models import (
+    Topic, TopicAnalysis, TopicSentimentBreakdown, TopicArticle, 
+    RawArticle, AISummary
+)
+from app.models.intelligence import CategoryConfig, SourcePerspective, IntelligenceCard
+from app.models.impact import RegionalImpact, ImpactCategory
+from app.services.ai.summarization_service import SummarizationService
+from app.services.ai.content_generator import AIContentGenerator
+from datetime import datetime
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+class GenerateTopicAnalysisJob:
+    """
+    🐛 DEBUG VERSION: Prints detailed database operations for troubleshooting.
+    """
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.ai_svc = SummarizationService(db)
+        self.content_gen = AIContentGenerator(db)
+        self.use_optimized = os.getenv('USE_OPTIMIZED_PIPELINE', 'true').lower() == 'true'
+
+    async def execute(self, topic_id: int):
+        """Execute the analysis pipeline with detailed debug output."""
+        
+        print("\n" + "+" + "="*78 + "+")
+        print(f"| TOPIC ANALYSIS JOB STARTING: ID={topic_id}".ljust(79) + "|")
+        print("+" + "="*78 + "+")
+        print(f"Mode: {'[OPTIMIZED] (1 API call)' if self.use_optimized else '[LEGACY] (4 API calls)'}")
+        print()
+        
+        try:
+            # Step 1: Fetch topic
+            print("- Step 1: Fetching topic from database...")
+            t_query = select(Topic).where(Topic.id == topic_id)
+            t_res = await self.db.execute(t_query)
+            topic = t_res.scalar_one_or_none()
+            
+            if not topic:
+                print(f"[FAIL] Topic {topic_id} not found in database")
+                return
+            
+            print(f"[OK] Found topic: {topic.title}")
+            print(f"   Category: {topic.category}")
+            print(f"   Status: {topic.status}")
+            print()
+
+            # Step 2: Fetch articles
+            print("- Step 2: Fetching articles...")
+            query = select(RawArticle).options(selectinload(RawArticle.source)).join(TopicArticle).where(TopicArticle.topic_id == topic_id)
+            result = await self.db.execute(query)
+            articles = result.scalars().all()
+            
+            if not articles:
+                print(f"[FAIL] No articles found for topic {topic_id}")
+                return
+            
+            print(f"[OK] Found {len(articles)} articles")
+            for i, a in enumerate(articles[:3], 1):
+                try:
+                    print(f"   {i}. {a.title[:60]}...")
+                except UnicodeEncodeError:
+                    print(f"   {i}. [Title with special chars]")
+            if len(articles) > 3:
+                print(f"   ... and {len(articles) - 3} more")
+            print()
+            
+            contents = [a.content for a in articles if a.content]
+            if not contents:
+                print(f"[FAIL] No content found in articles")
+                return
+            
+            combined_text = "\n\n".join(contents[:5])
+            print(f"[OK] Combined content length: {len(combined_text)} chars")
+            print()
+
+            # Step 3: Fetch category config
+            print("- Step 3: Fetching category configuration...")
+            category_config = None
+            if topic.category:
+                config_query = select(CategoryConfig).where(CategoryConfig.category == topic.category.lower())
+                config_res = await self.db.execute(config_query)
+                category_config = config_res.scalar_one_or_none()
+            
+            if not category_config:
+                print(f"[WARN] No category config for '{topic.category}'")
+                print(f"   Check: SELECT * FROM category_configs WHERE category = '{topic.category}';")
+                print(f"   Analysis will be limited or may fail!")
+                print()
+            else:
+                print(f"[OK] Found category config for '{topic.category}'")
+                dims = category_config.dimension_mappings.get('primary_dimensions', [])
+                print(f"   Dimensions: {dims}")
+                impacts = [c.get('key') for c in category_config.impact_categories]
+                print(f"   Impact categories: {impacts}")
+                print()
+
+            # Step 4: Generate basic summary
+            print("- Step 4: Generating basic summary...")
+            analysis_data = await self.ai_svc.generate_summary_pipeline(contents)
+            print(f"[OK] Summary generated ({len(analysis_data.get('summary', ''))} chars)")
+            print(f"   Provider: {analysis_data.get('provider', 'Unknown')}")
+            print()
+            
+            # Store snapshot
+            existing_analysis = await self.db.execute(
+                select(TopicAnalysis).where(TopicAnalysis.topic_id == topic_id)
+            )
+            analysis = existing_analysis.scalar_one_or_none()
+            if analysis:
+                print("   Updating existing TopicAnalysis...")
+                analysis.summary = analysis_data["summary"]
+                analysis.facts = analysis_data["facts"]
+                analysis.regional_framing = analysis_data["regional_framing"]
+            else:
+                print("   Creating new TopicAnalysis...")
+                analysis = TopicAnalysis(
+                    topic_id=topic_id,
+                    summary=analysis_data["summary"],
+                    facts=analysis_data["facts"],
+                    regional_framing=analysis_data["regional_framing"]
+                )
+                self.db.add(analysis)
+            
+            # Store historical record
+            print("   Creating AISummary record...")
+            ai_summary = AISummary(
+                topic_id=topic_id,
+                summary_type="60_second",
+                content=analysis_data["summary"],
+                bullet_points=analysis_data.get("facts", []),
+                model_used=analysis_data.get("provider", "Unknown"),
+                quality_score=analysis_data.get("confidence_score", 0.0),
+                is_current=True,
+                generated_at=datetime.now()
+            )
+            self.db.add(ai_summary)
+            print("[OK] Basic summary stored")
+            print()
+
+            overall_sentiment = "neutral"
+            sentiment_score = 0.0
+
+            # Step 5-8: Enhanced Analysis
+            if category_config:
+                if self.use_optimized:
+                    print("- Step 5-8: Running OPTIMIZED analysis (1 API call)...")
+                    await self._execute_optimized_analysis(
+                        topic, topic_id, combined_text, articles, category_config
+                    )
+                else:
+                    print("- Step 5-8: Running LEGACY analysis (4 API calls)...")
+                    await self._execute_legacy_analysis(
+                        topic, topic_id, combined_text, articles, category_config
+                    )
+                
+                # Calculate overall sentiment
+                print("\n- Calculating overall sentiment...")
+                sentiment_query = select(TopicSentimentBreakdown).where(TopicSentimentBreakdown.topic_id == topic_id)
+                sentiment_res = await self.db.execute(sentiment_query)
+                sentiment_items = sentiment_res.scalars().all()
+                
+                if sentiment_items:
+                    avg_score = sum(s.sentiment_score for s in sentiment_items) / len(sentiment_items)
+                    sentiment_score = avg_score
+                    if avg_score > 0.2:
+                        overall_sentiment = "positive"
+                    elif avg_score < -0.2:
+                        overall_sentiment = "negative"
+                    print(f"[OK] Overall sentiment: {overall_sentiment} (score: {sentiment_score:.2f})")
+                else:
+                    print("[WARN] No sentiment items found - using neutral")
+                print()
+
+            # Step 9: Update topic
+            print("- Step 9: Updating topic record...")
+            topic.overall_sentiment = overall_sentiment
+            topic.sentiment_score = sentiment_score
+            topic.status = "stable"
+            topic.last_verified_at = datetime.now()
+            print(f"   Set overall_sentiment = '{overall_sentiment}'")
+            print(f"   Set sentiment_score = {sentiment_score:.2f}")
+            print(f"   Set status = 'stable'")
+            print()
+            
+            # Step 10: Commit transaction
+            print("- Step 10: Committing to database...")
+            await self.db.commit()
+            print("[OK] Database commit successful")
+            
+            # Verify data was stored
+            print("\n- VERIFICATION: Checking stored data...")
+            
+            # Check sentiment breakdown
+            sent_query = select(TopicSentimentBreakdown).where(TopicSentimentBreakdown.topic_id == topic_id)
+            sent_res = await self.db.execute(sent_query)
+            sent_count = len(sent_res.scalars().all())
+            print(f"   topic_sentiment_breakdown: {sent_count} rows")
+            
+            # Check source perspectives
+            persp_query = select(SourcePerspective).where(SourcePerspective.topic_id == topic_id)
+            persp_res = await self.db.execute(persp_query)
+            persp_count = len(persp_res.scalars().all())
+            print(f"   source_perspectives: {persp_count} rows")
+            
+            # Check regional impacts
+            impact_query = select(RegionalImpact).where(RegionalImpact.topic_id == topic_id)
+            impact_res = await self.db.execute(impact_query)
+            impact_count = len(impact_res.scalars().all())
+            print(f"   regional_impacts: {impact_count} rows")
+            
+            # Check intelligence card
+            card_query = select(IntelligenceCard).where(IntelligenceCard.topic_id == topic_id)
+            card_res = await self.db.execute(card_query)
+            card_count = len(card_res.scalars().all())
+            print(f"   intelligence_cards: {card_count} rows")
+            
+            print("\n" + "+" + "="*78 + "+")
+            print(" | [OK] ANALYSIS COMPLETED SUCCESSFULLY".ljust(79) + "|")
+            print("+" + "="*78 + "+\n")
+
+        except Exception as e:
+            print("\n" + "+" + "="*78 + "+")
+            print(f"| [FAIL] ERROR IN ANALYSIS".ljust(79) + "|")
+            print("+" + "="*78 + "+")
+            print(f"Error: {e}")
+            print()
+            
+            await self.db.rollback()
+            print("Database rolled back")
+            
+            # Mark topic as failed
+            try:
+                t_res = await self.db.execute(select(Topic).where(Topic.id == topic_id))
+                topic_ref = t_res.scalar_one_or_none()
+                if topic_ref:
+                    topic_ref.status = 'analysis_failed'
+                    topic_ref.overall_sentiment = 'error'
+                    if not topic_ref.metadata_:
+                        topic_ref.metadata_ = {}
+                    topic_ref.metadata_['last_error'] = str(e)[:200]
+                    topic_ref.metadata_['error_at'] = str(datetime.now())
+                    await self.db.commit()
+                    print(f"Marked topic {topic_id} as 'analysis_failed'")
+            except Exception as e2:
+                print(f"Failed to set error state: {e2}")
+            
+            print()
+            return
+    
+    async def _execute_optimized_analysis(
+        self,
+        topic: Topic,
+        topic_id: int,
+        combined_text: str,
+        articles: list,
+        category_config: CategoryConfig
+    ):
+        """🚀 OPTIMIZED: Single API call with detailed output."""
+        
+        # Prepare sources data
+        sources_data = [
+            {
+                "name": a.source.name if a.source else "Unknown",
+                "headline": a.title,
+                "type": a.source.type if a.source else "unknown"
+            }
+            for a in articles if a.source
+        ]
+        
+        print(f"   Prepared {len(sources_data)} sources for analysis")
+        
+        # Make the single unified call (this will print detailed output)
+        result = await self.content_gen.generate_complete_analysis(
+            topic_title=topic.title,
+            topic_content=combined_text,
+            category_config=category_config,
+            sources=sources_data,
+            timeout_seconds=90
+        )
+        
+        print("\n─ Storing results in database...")
+        
+        # Store sentiment breakdown
+        print("   Deleting old sentiment breakdown...")
+        await self.db.execute(delete(TopicSentimentBreakdown).where(TopicSentimentBreakdown.topic_id == topic_id))
+        
+        print(f"   Inserting {len(result['sentiment_breakdown'])} sentiment items...")
+        for item in result['sentiment_breakdown']:
+            sentiment = TopicSentimentBreakdown(
+                topic_id=topic_id,
+                dimension_type=item["dimension_type"],
+                dimension_value=item["dimension_value"],
+                sentiment=item["sentiment"],
+                sentiment_score=item["sentiment_score"],
+                percentage=item["percentage"],
+                icon=item.get("icon"),
+                description=item.get("description")
+            )
+            self.db.add(sentiment)
+            print(f"      + {item['dimension_type']}: {item['dimension_value']} = {item['sentiment']} ({item['sentiment_score']})")
+        
+        # Store source perspectives
+        print(f"\n   Deleting old source perspectives...")
+        await self.db.execute(delete(SourcePerspective).where(SourcePerspective.topic_id == topic_id))
+        
+        print(f"   Inserting {len(result['source_perspectives'])} perspective items...")
+        for persp in result['source_perspectives']:
+            perspective = SourcePerspective(
+                topic_id=topic_id,
+                source_name=persp["source_name"],
+                source_type=persp.get("source_type"),
+                frame_label=persp["frame_label"],
+                sentiment=persp["sentiment"],
+                sentiment_percentage=persp["sentiment_percentage"],
+                key_narrative=persp["key_narrative"]
+            )
+            self.db.add(perspective)
+            print(f"      + {persp['source_name']}: {persp['frame_label']}")
+        
+        # Store regional impacts
+        print(f"\n   Deleting old regional impacts...")
+        await self.db.execute(delete(RegionalImpact).where(RegionalImpact.topic_id == topic_id))
+        
+        print(f"   Inserting {len(result['regional_impacts'])} impact items...")
+        for impact_data in result['regional_impacts']:
+            cat_key = impact_data.get("impact_category", "general")
+            
+            # Ensure ImpactCategory exists
+            cat_query = select(ImpactCategory).where(ImpactCategory.slug == cat_key)
+            cat_result = await self.db.execute(cat_query)
+            impact_category_obj = cat_result.scalar_one_or_none()
+            
+            if not impact_category_obj:
+                print(f"      Creating ImpactCategory: {cat_key}")
+                impact_category_obj = ImpactCategory(
+                    name=cat_key.replace("_", " ").title(),
+                    slug=cat_key,
+                    icon=impact_data.get("icon", "📊"),
+                    display_order=0
+                )
+                self.db.add(impact_category_obj)
+                await self.db.flush()
+            
+            regional_impact = RegionalImpact(
+                topic_id=topic_id,
+                impact_category_id=impact_category_obj.id,
+                impact_category=cat_key,
+                icon=impact_data.get("icon", "📊"),
+                title=impact_data.get("title", cat_key.replace("_", " ").title()),
+                value=impact_data.get("value", "Impact identified"),
+                severity=impact_data.get("severity", "medium"),
+                context=impact_data.get("context", ""),
+                is_current=True
+            )
+            self.db.add(regional_impact)
+            print(f"      + {cat_key}: {impact_data.get('value', '')[:50]}...")
+        
+        # Store intelligence card
+        print(f"\n   Deleting old intelligence card...")
+        await self.db.execute(delete(IntelligenceCard).where(IntelligenceCard.topic_id == topic_id))
+        
+        print(f"   Inserting intelligence card...")
+        card_data = result['intelligence_card']
+        card = IntelligenceCard(
+            topic_id=topic_id,
+            category=card_data.get("category", topic.category),
+            icon=card_data.get("icon"),
+            title=card_data.get("title"),
+            description=card_data.get("description"),
+            trend_percentage=card_data.get("trend_percentage"),
+            is_positive=card_data.get("is_positive"),
+            display_order=0
+        )
+        self.db.add(card)
+        print(f"      + Title: {card_data.get('title')}")
+        print(f"      + Trend: {card_data.get('trend_percentage')} (positive: {card_data.get('is_positive')})")
+        
+        print("\n✅ All data prepared for commit")
+    
+    async def _execute_legacy_analysis(
+        self,
+        topic: Topic,
+        topic_id: int,
+        combined_text: str,
+        articles: list,
+        category_config: CategoryConfig
+    ):
+        """⚠️  LEGACY: 4 separate API calls."""
+        print("   ⚠️  Using legacy 4-call method - set USE_OPTIMIZED_PIPELINE=true to optimize")
+        
+        # Implementation same as before but with debug output
+        raise NotImplementedError("Legacy path not implemented in debug version - use optimized")

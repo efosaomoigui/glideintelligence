@@ -1,0 +1,360 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Jobs | Glide Admin{% endblock %}
+
+{% block content %}
+    <div class="flex-between" style="margin-bottom: 32px;">
+        <h1>Content Pipeline & Jobs</h1>
+        <div class="flex gap-2">
+            <span class="system-status" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa;">
+                <div class="status-dot" style="background: #60a5fa; box-shadow: 0 0 8px #60a5fa;"></div>
+                Worker Node Active
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-3">
+        <!-- Queue Status -->
+        <div class="card">
+            <h2>Queue Metrics</h2>
+             <div class="flex-between" style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+                <span>Pending Tasks</span>
+                <span id="queue-pending" class="badge badge-warning" style="font-size: 1rem;">{{ queue_stats.pending }}</span>
+            </div>
+             <div class="flex-between" style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+                <span>Active Execution</span>
+                <span id="queue-active" class="badge badge-success" style="font-size: 1rem;">{{ queue_stats.active }}</span>
+            </div>
+             <div class="flex-between" style="padding: 12px 0;">
+                <span>Failed (24h)</span>
+                <span id="queue-failed" class="badge badge-danger" style="font-size: 1rem;">{{ queue_stats.failed }}</span>
+            </div>
+        </div>
+
+        <!-- Manual Triggers -->
+        <div class="card" style="grid-column: span 2;">
+            <h2>Manual Triggers</h2>
+            <div class="grid grid-3">
+                <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Fetch Articles</div>
+                    <div class="text-sm text-muted" style="margin-bottom: 12px;">RSS & Scrapers ingestion</div>
+                    <form action="/api/admin/jobs/trigger/fetch" method="post">
+                        <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">Run Now</button>
+                    </form>
+                </div>
+                
+                 <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="font-weight: 600; margin-bottom: 4px;">AI Analysis</div>
+                    <div class="text-sm text-muted" style="margin-bottom: 12px;">Summarization & Sentiment</div>
+                    <form action="/api/admin/jobs/trigger/ai" method="post">
+                        <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">Run Now</button>
+                    </form>
+                </div>
+
+                 <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Trend Update</div>
+                    <div class="text-sm text-muted" style="margin-bottom: 12px;">Cluster & Rank Topics</div>
+                    <form action="/api/admin/jobs/trigger/trends" method="post">
+                         <button type="submit" class="btn btn-sm btn-outline" style="width: 100%;">Run Now</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Job Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Recent Execution History</h2>
+            <button class="btn btn-sm btn-outline">Viewing Last 50</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Job ID</th>
+                    <th>Task Name</th>
+                    <th>Status</th>
+                    <th>Started At</th>
+                    <th>Duration</th>
+                    <th>Target</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">{{ job.id[:8] }}...</td>
+                    <td><div style="font-weight: 500;">{{ job.name or job.type }}</div></td>
+                    <td>
+                        {% if job.status in ['SUCCESS', 'COMPLETED'] %}
+                        <span class="badge badge-success">Success</span>
+                        {% elif job.status in ['FAILURE', 'FAILED'] %}
+                        <span class="badge badge-danger">Failed</span>
+                        {% elif job.status == 'PENDING' %}
+                        <span class="badge badge-warning">Pending</span>
+                        {% else %}
+                        <span class="badge badge-blue">{{ job.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else '-' }}</td>
+                    <td>{{ "%.2fs"|format(job.duration) if job.duration else '-' }}</td>
+                    <td style="font-size: 0.8rem;">{{ job.args or '-' }}</td>
+                    <td>
+                        {% if job.status == 'FAILURE' %}
+                        <button class="btn btn-sm btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Retry</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">No jobs found in history.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex-between" style="margin-top: 16px;">
+        <div class="text-sm text-muted">
+            Showing {{ (pagination.page - 1) * pagination.limit + 1 }} to {{ [(pagination.page * pagination.limit), pagination.total]|min }} of {{ pagination.total }} jobs
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.page - 1 }}&limit={{ pagination.limit }}" class="btn btn-sm btn-outline">Previous</a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled style="opacity: 0.5; cursor: not-allowed;">Previous</button>
+            {% endif %}
+            
+            <span class="btn btn-sm" style="background: transparent; cursor: default;">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+            
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.page + 1 }}&limit={{ pagination.limit }}" class="btn btn-sm btn-outline">Next</a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled style="opacity: 0.5; cursor: not-allowed;">Next</button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Job Trigger Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("Initializing job trigger listeners...");
+        const forms = document.querySelectorAll('form[action^="/api/admin/jobs/trigger"]');
+        console.log(`Found ${forms.length} trigger forms.`);
+
+        forms.forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                console.log(`Submitting trigger for: ${form.action}`);
+                
+                const btn = form.querySelector('button');
+                const originalText = btn.innerText;
+                
+                btn.disabled = true;
+                btn.innerText = "Starting...";
+                
+                try {
+                    const res = await fetch(form.action, {
+                        method: 'POST',
+                        headers: { 
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({}) 
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        console.log("Trigger success:", data);
+                        showToast(`Job triggered successfully! ID: ${data.job_id}`, 'success');
+                        // Immediate poll could catch the PENDING state
+                        fetchJobs(); 
+                    } else {
+                        const errText = await res.text();
+                        console.error("Trigger failed:", res.status, errText);
+                        showToast(`Failed: ${res.status} ${errText.substring(0, 50)}...`, 'error');
+                    }
+                } catch (err) {
+                    console.error("Network error during trigger:", err);
+                    showToast(`Network error: ${err.message}`, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            });
+        });
+    });
+
+    // Toast Notification Helper
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.padding = '12px 24px';
+        toast.style.borderRadius = '8px';
+        toast.style.color = '#fff';
+        toast.style.zIndex = '1000';
+        toast.style.animation = 'slideIn 0.3s ease-out';
+        
+        if (type === 'success') toast.style.background = '#10b981';
+        else if (type === 'error') toast.style.background = '#ef4444';
+        else toast.style.background = '#3b82f6';
+        
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // CSS for animations
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    `;
+    document.head.appendChild(style);
+
+    // Job Polling
+    async function fetchJobs() {
+        try {
+            // Extract page and limit from URL to respect pagination
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page') || 1;
+            const limit = urlParams.get('limit') || 12;
+            
+            const res = await fetch(`/api/admin/jobs/list?page=${page}&limit=${limit}`);
+            if (!res.ok) return;
+            const jobs = await res.json();
+            updateJobTable(jobs);
+            updateQueueStats(jobs);
+        } catch (err) {
+            console.error("Polling error:", err);
+        }
+    }
+
+    function updateJobTable(jobs) {
+        const tbody = document.querySelector('table tbody');
+        if (!jobs || jobs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">No jobs found in history.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = jobs.map(job => `
+            <tr>
+                <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">${job.id.substring(0,8)}...</td>
+                <td><div style="font-weight: 500;">${job.type || job.name}</div></td>
+                <td>
+                    ${getStatusBadge(job.status)}
+                </td>
+                <td>${formatDate(job.started_at)}</td>
+                <td>${formatDuration(job)}</td>
+                <td style="font-size: 0.8rem;">
+                    <div class="flex gap-2">
+                         <a href="/admin/logs?search=${job.id}" class="text-primary" style="text-decoration: none; font-size: 0.75rem;">Logs</a>
+                         <span class="text-muted">|</span>
+                         <span title="${JSON.stringify(job.payload || {}).replace(/"/g, '&quot;')}">Payload</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="flex gap-2">
+                        ${['FAILURE', 'FAILED', 'CANCELLED'].includes(job.status) 
+                            ? `<button onclick="retryJob('${job.id}')" class="btn btn-sm btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Retry</button>` 
+                            : ''}
+                        
+                        ${['RUNNING', 'STARTED', 'PENDING'].includes(job.status)
+                            ? `<button onclick="cancelJob('${job.id}')" class="btn btn-sm" style="padding: 2px 8px; font-size: 0.7rem; color: #f43f5e; border: 1px solid #f43f5e; background: #ffe4e6;">Stop</button>`
+                            : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function updateQueueStats(jobs) {
+        // Simple client-side calc based on fetched list (approximate)
+        const pending = jobs.filter(j => j.status === 'PENDING').length;
+        const active = jobs.filter(j => ['RUNNING', 'STARTED'].includes(j.status)).length;
+        const failed = jobs.filter(j => ['FAILED', 'FAILURE'].includes(j.status)).length;
+        
+        // Update badges by IDs
+        const pendingEl = document.getElementById('queue-pending');
+        const activeEl = document.getElementById('queue-active');
+        const failedEl = document.getElementById('queue-failed');
+        
+        if (pendingEl) pendingEl.innerText = pending;
+        if (activeEl) activeEl.innerText = active;
+        if (failedEl) failedEl.innerText = failed;
+    }
+
+    function getStatusBadge(status) {
+        if (['SUCCESS', 'COMPLETED'].includes(status)) return '<span class="badge badge-success">Success</span>';
+        if (['FAILURE', 'FAILED'].includes(status)) return '<span class="badge badge-danger">Failed</span>';
+        if (['PENDING'].includes(status)) return '<span class="badge badge-warning">Pending</span>';
+        if (['RUNNING', 'STARTED'].includes(status)) return '<span class="badge badge-blue">Running</span>';
+        return `<span class="badge badge-blue">${status}</span>`;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleString();
+    }
+    
+    function formatDuration(job) {
+         // If we have duration in DB, use it. Otherwise calc.
+         // job from API might be Pydantic model dump.
+         if (job.completed_at && job.started_at) {
+             const start = new Date(job.started_at);
+             const end = new Date(job.completed_at);
+             return ((end - start) / 1000).toFixed(2) + 's';
+         }
+         return '-';
+    }
+
+    // Poll every 3 seconds
+    setInterval(fetchJobs, 3000);
+    // Initial fetch
+    fetchJobs();
+
+    // Job Actions
+    async function cancelJob(jobId) {
+        if (!confirm('Are you sure you want to stop this job?')) return;
+        try {
+            const res = await fetch(`/api/admin/jobs/${jobId}/cancel`, { method: 'POST' });
+            if (res.ok) {
+                showToast('Job cancellation requested', 'info');
+                fetchJobs();
+            } else {
+                const err = await res.text();
+                showToast(`Failed to cancel: ${err}`, 'error');
+            }
+        } catch (e) {
+            showToast(`Error: ${e.message}`, 'error');
+        }
+    }
+
+    async function retryJob(jobId) {
+        if (!confirm('Retry this job with same parameters?')) return;
+        try {
+            const res = await fetch(`/api/admin/jobs/${jobId}/retry`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`Job retried! New ID: ${data.new_job_id}`, 'success');
+                fetchJobs();
+            } else {
+                const err = await res.text();
+                showToast(`Failed to retry: ${err}`, 'error');
+            }
+        } catch (e) {
+            showToast(`Error: ${e.message}`, 'error');
+        }
+    }
+</script>
+{% endblock %}

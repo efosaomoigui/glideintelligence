@@ -1,0 +1,72 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Logs | Glide Admin{% endblock %}
+
+{% block content %}
+    <div class="flex-between" style="margin-bottom: 32px;">
+        <h1>Activity Logs & Errors</h1>
+        <div class="flex gap-2">
+            <a href="/api/admin/logs/export" class="btn btn-outline btn-sm">Export CSV</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <form method="GET" action="/admin/logs" class="flex gap-4" style="width: 100%;">
+                <input type="text" name="search" class="form-control" placeholder="Search logs..." style="width: 300px;" value="{{ filters.search }}">
+                <select name="level" class="form-control" style="width: 150px;">
+                    <option value="" {% if not filters.level %}selected{% endif %}>All Levels</option>
+                    <option value="INFO" {% if filters.level == 'INFO' %}selected{% endif %}>INFO</option>
+                    <option value="WARNING" {% if filters.level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                    <option value="ERROR" {% if filters.level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                </select>
+                <button type="submit" class="btn btn-sm">Filter</button>
+                {% if filters.search or filters.level %}
+                <a href="/admin/logs" class="btn btn-outline btn-sm">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div style="background: #000; border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; height: 600px; overflow-y: auto; color: #d4d4d4;">
+            {% for log in logs %}
+            <div style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 8px;">
+                <span style="color: #569cd6;">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                {% if "ERROR" in log.action or "FAIL" in log.action %}
+                <span style="color: #f87171; font-weight: bold;">[{{ log.action }}]</span>
+                {% else %}
+                <span style="color: #4ec9b0; font-weight: bold;">[{{ log.action }}]</span>
+                {% endif %}
+                <span style="color: #ce9178;">User:{{ log.user_id }}</span>
+                <span style="color: #d4d4d4;">{{ log.details }}</span>
+                {% if log.target %}
+                <span style="color: #6a9955;">-> {{ log.target }}</span>
+                {% endif %}
+            </div>
+            {% else %}
+            <div style="text-align: center; color: #666; padding: 40px;">No logs found matching criteria.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex-between" style="margin-top: 16px;">
+        <div class="text-sm text-muted">
+            Showing {{ (pagination.page - 1) * pagination.limit + 1 }} to {{ [(pagination.page * pagination.limit), pagination.total]|min }} of {{ pagination.total }} logs
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.page - 1 }}&limit={{ pagination.limit }}&search={{ filters.search }}&level={{ filters.level }}" class="btn btn-sm btn-outline">Previous</a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled style="opacity: 0.5; cursor: not-allowed;">Previous</button>
+            {% endif %}
+            
+            <span class="btn btn-sm" style="background: transparent; cursor: default;">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+            
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.page + 1 }}&limit={{ pagination.limit }}&search={{ filters.search }}&level={{ filters.level }}" class="btn btn-sm btn-outline">Next</a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled style="opacity: 0.5; cursor: not-allowed;">Next</button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Ads Manager | Glide Intelligence{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-4">
+    <div>
+        <h1>Ads Manager</h1>
+        <p class="text-muted" style="margin-top: -16px; margin-bottom: 24px;">Manage dynamic ad placements and track performance.</p>
+    </div>
+    <a href="/admin/ads/create" class="btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Create New Ad
+    </a>
+</div>
+
+<!-- Metrics overview -->
+<div class="grid grid-4 mb-4">
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="font-size: 0.875rem; color: var(--text-muted); margin: 0 0 8px 0;">Total Active Ads</h3>
+        <div style="font-size: 2rem; font-weight: 600;">{{ stats.active_ads }}</div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="font-size: 0.875rem; color: var(--text-muted); margin: 0 0 8px 0;">Total Views</h3>
+        <div style="font-size: 2rem; font-weight: 600;">{{ "{:,}".format(stats.total_views) }}</div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="font-size: 0.875rem; color: var(--text-muted); margin: 0 0 8px 0;">Total Clicks</h3>
+        <div style="font-size: 2rem; font-weight: 600;">{{ "{:,}".format(stats.total_clicks) }}</div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="font-size: 0.875rem; color: var(--primary); margin: 0 0 8px 0;">Total Revenue</h3>
+        <div style="font-size: 2rem; font-weight: 600;">${{ "{:,.2f}".format(stats.total_revenue) }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ad Title</th>
+                <th>Type</th>
+                <th>Placement</th>
+                <th>Status</th>
+                <th>Performance</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ad in ads %}
+            <tr>
+                <td>
+                    <div style="font-weight: 500;">{{ ad.title }}</div>
+                    <div class="text-xs text-muted mt-1">ID: {{ ad.id[:8] }}...</div>
+                </td>
+                <td>
+                    {% if ad.ad_type == 'external' %}
+                        <span class="badge badge-blue">Network/Script</span>
+                    {% elif ad.ad_type == 'sponsor' %}
+                        <span class="badge badge-success">Sponsored Content</span>
+                    {% else %}
+                        <span class="badge badge-warning">Image Banner</span>
+                    {% endif %}
+                </td>
+                <td>{{ ad.placement_group }}</td>
+                <td>
+                    {% if ad.status == 'active' %}
+                        <span class="badge badge-success">Active</span>
+                    {% elif ad.status == 'paused' %}
+                        <span class="badge badge-warning">Paused</span>
+                    {% else %}
+                        <span class="badge badge-danger">Archived</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="text-sm">
+                        <span style="color: #60a5fa;">{{ "{:,}".format(ad.views_count) }} V</span> &bull; 
+                        <span style="color: #34d399;">{{ "{:,}".format(ad.click_count) }} C</span> &bull; 
+                        <span style="color: #fbbf24;">${{ "{:,.2f}".format(ad.revenue_generated or 0.0) }}</span>
+                    </div>
+                </td>
+                <td style="text-align: right;">
+                    <a href="/admin/ads/edit/{{ ad.id }}" class="btn btn-outline btn-sm">Edit</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    No ads created yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if pagination.total_pages > 1 %}
+    <div class="flex-between mt-4" style="padding-top: 16px; border-top: 1px solid var(--border);">
+        <div class="text-sm text-muted">
+            Viewing page {{ pagination.page }} of {{ pagination.total_pages }}
+        </div>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+                <a href="?page={{ pagination.page - 1 }}" class="btn btn-outline btn-sm">Previous</a>
+            {% endif %}
+            {% if pagination.has_next %}
+                <a href="?page={{ pagination.page + 1 }}" class="btn btn-outline btn-sm">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

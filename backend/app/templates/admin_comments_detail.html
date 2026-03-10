@@ -1,0 +1,56 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Comment Thread | Glide Intelligence{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-4">
+    <div>
+        <a href="/admin/comments" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; display: inline-block;">&larr; Back to Topics</a>
+        <h1>Discussion: {{ topic.title }}</h1>
+        <div class="text-sm text-muted">Category: <span class="badge badge-blue">{{ topic.category }}</span> | Total Comments: {{ comments|length }}</div>
+    </div>
+    
+    <div>
+        <a href="/admin/comments/topic/{{ topic.id }}/export" class="btn btn-outline" target="_blank" style="margin-left: 8px;">
+            Export to PDF
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4" style="padding: 24px;">
+    <h3 style="margin-top: 0; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">Core Narrative</h3>
+    <p style="color: var(--text-muted); line-height: 1.6;">
+        {{ topic.summary }}
+    </p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Community Thread</h2>
+    </div>
+    <div class="comments-list">
+        {% for comment in comments %}
+        <div style="padding: 16px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; background: rgba(255,255,255,0.02);">
+            <div class="flex-between mb-4" style="border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+                <div style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
+                        {{ (comment.user.username[0] | upper) if comment.user.username else 'U' }}
+                    </div>
+                    @{{ comment.user.username if comment.user.username else comment.user.email.split('@')[0] }}
+                </div>
+                <div class="text-sm text-muted">
+                    {{ comment.created_at.strftime('%b %d, %Y at %I:%M %p') if comment.created_at else 'Unknown' }}
+                </div>
+            </div>
+            <div style="line-height: 1.6; font-size: 0.95rem;">
+                {{ comment.content }}
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 48px; border: 1px dashed var(--border); border-radius: 8px;">
+            No comments found for this topic yet.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

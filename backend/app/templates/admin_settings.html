@@ -1,0 +1,157 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Settings | Glide Admin{% endblock %}
+
+{% block content %}
+    <h1>System Governance & Admin Control</h1>
+    
+    <div class="grid">
+        <!-- AI Providers -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>AI Providers & Configuration</h2>
+            <div style="margin-bottom: 24px;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Model</th>
+                            <th>Status</th>
+                            <th>API URL</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for provider in providers %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ provider.name }}</td>
+                            <td style="color: var(--text-muted);">{{ provider.model }}</td>
+                            <td>
+                                <form action="/api/admin/settings/ai-toggle" method="post" style="display:inline;">
+                                    <input type="hidden" name="name" value="{{ provider.name }}">
+                                    <input type="hidden" name="enabled" value="{{ 'false' if provider.enabled else 'true' }}">
+                                    <button type="submit" class="badge {% if provider.enabled %}badge-success{% else %}badge-danger{% endif %}" style="border:none; cursor:pointer; font-family:inherit;">
+                                        {{ "Enabled" if provider.enabled else "Disabled" }}
+                                    </button>
+                                </form>
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">{{ provider.api_url or 'Default' }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" 
+                                    onclick="openEditProviderModal('{{ provider.name }}', '{{ provider.model }}', '{{ provider.api_url or '' }}')">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <button class="btn btn-sm" onclick="document.getElementById('addProviderModal').style.display='flex'">Add New Provider</button>
+        </div>
+
+        <!-- Source Health -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>Crawler & Source Health</h2>
+            <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+                {% for h in health %}
+                <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div class="flex-between" style="margin-bottom: 8px;">
+                        <span style="font-weight: 600;">Source #{{ h.source_id }}</span>
+                        <span class="badge {% if h.status == 'healthy' %}badge-success{% elif h.status == 'degraded' %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ h.status | upper }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        <div>Failures: {{ h.fail_count }}</div>
+                        {% if h.last_success %}
+                        <div>Last OK: {{ h.last_success.strftime('%Y-%m-%d %H:%M') }}</div>
+                        {% else %}
+                        <div>Last OK: Never</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Provider Modal -->
+    <div id="addProviderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 500px; max-width: 90%;">
+            <h2>Add AI Provider</h2>
+            <form action="/api/admin/settings/ai-providers" method="post">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. OpenAI" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API Key</label>
+                    <input type="password" name="api_key" class="form-control" placeholder="psk-..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model Name</label>
+                    <input type="text" name="model" class="form-control" placeholder="e.g. gpt-4-turbo" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Base URL (Optional)</label>
+                    <input type="text" name="api_url" class="form-control" placeholder="https://api.openai.com/v1">
+                </div>
+                <div class="flex-between" style="margin-top: 24px;">
+                    <button type="button" onclick="document.getElementById('addProviderModal').style.display='none'" class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn">Add Provider</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Provider Modal -->
+    <div id="editProviderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 500px; max-width: 90%;">
+            <h2>Edit AI Provider</h2>
+            <form id="editProviderForm" action="/api/admin/settings/ai-providers/update" method="post">
+                <input type="hidden" id="edit_name_orig" name="original_name">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" id="edit_name" name="name" class="form-control" required readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
+                    <small class="text-muted">Provider name cannot be changed.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API Key (Leave blank to keep unchanged)</label>
+                    <input type="password" name="api_key" class="form-control" placeholder="Update API Key">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model Name</label>
+                    <input type="text" id="edit_model" name="model" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Base URL</label>
+                    <input type="text" id="edit_url" name="api_url" class="form-control">
+                </div>
+                <div class="flex-between" style="margin-top: 24px;">
+                    <button type="button" onclick="document.getElementById('editProviderModal').style.display='none'" class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditProviderModal(name, model, url) {
+            document.getElementById('edit_name_orig').value = name;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_model').value = model;
+            document.getElementById('edit_url').value = url;
+            document.getElementById('editProviderModal').style.display = 'flex';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('addProviderModal')) {
+                document.getElementById('addProviderModal').style.display = "none";
+            }
+            if (event.target == document.getElementById('editProviderModal')) {
+                document.getElementById('editProviderModal').style.display = "none";
+            }
+        }
+    </script>
+{% endblock %}

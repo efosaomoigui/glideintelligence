@@ -1,0 +1,236 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Dashboard | Glide Admin{% endblock %}
+
+{% block content %}
+    <div class="flex-between">
+        <h1>System Overview</h1>
+        <div class="flex gap-2">
+             <button class="btn btn-outline btn-sm" onclick="window.location.reload()">Refresh Data</button>
+             <form action="/api/admin/jobs/trigger/fetch" method="POST" style="display: inline;">
+                 <button type="submit" class="btn btn-sm">Trigger Fetch</button>
+             </form>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-5" style="margin-bottom: 32px;">
+        <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <div class="text-sm text-muted" style="margin-bottom: 8px;">Total Sources</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ stats.total_sources }}</div>
+            <div class="flex-between" style="margin-top: 8px;">
+                <span class="badge badge-success">{{ stats.active_sources }} Active</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">+2 this week</span>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <div class="text-sm text-muted" style="margin-bottom: 8px;">Jobs (24h)</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ stats.jobs_24h }}</div>
+             <div class="flex-between" style="margin-top: 8px;">
+                <span class="badge badge-warning">{{ stats.failed_jobs }} Failed</span>
+                 <span style="font-size: 0.8rem; color: var(--text-muted);">All Tasks</span>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 0; padding: 20px;">
+             <div class="text-sm text-muted" style="margin-bottom: 8px;">Topics Identified</div>
+            <div style="font-size: 2rem; font-weight: 600;">{{ stats.total_topics }}</div>
+             <div class="flex-between" style="margin-top: 8px;">
+                 <span class="badge badge-blue">AI Powered</span>
+                 <span style="font-size: 0.8rem; color: var(--text-muted);">{{ stats.topics_today }} today</span>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <div class="text-sm text-muted" style="margin-bottom: 8px;">AI Spend (Today)</div>
+            <div style="font-size: 2rem; font-weight: 600; color: #fbbf24;">${{ "%.2f"|format(stats.ai_cost_today) }}</div>
+             <div class="flex-between" style="margin-top: 8px;">
+                 <span class="badge badge-warning">{{ stats.ai_tokens_today }} Tokens</span>
+                 <span style="font-size: 0.8rem; color: var(--text-muted);">Budget: $5.00</span>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 0; padding: 20px;">
+            <div class="text-sm text-muted" style="margin-bottom: 8px;">Total Page Views</div>
+            <div style="font-size: 2rem; font-weight: 600; color: #34d399;">{{ stats.total_views | int }}</div>
+             <div class="flex-between" style="margin-top: 8px;">
+                 <span class="badge badge-success">Across All Topics</span>
+                 <span style="font-size: 0.8rem; color: var(--text-muted);">Live count</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-3">
+        <!-- Main Chart -->
+        <div class="card" style="grid-column: span 2;">
+            <h2>Data Ingestion Volume (Last 7 Days)</h2>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="volumeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="card">
+            <h2>Recent Activity</h2>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                 {% for log in recent_logs %}
+                 <div class="flex gap-2" style="font-size: 0.9rem;">
+                     {% if "ERROR" in log.action %}
+                     <span style="color: #f87171;">●</span>
+                     {% else %}
+                     <span style="color: #34d399;">●</span>
+                     {% endif %}
+                     <div>
+                         <div style="font-weight: 500;">{{ log.action }}</div>
+                         <div style="color: var(--text-muted); font-size: 0.8rem;">{{ log.target }} - {{ log.created_at.strftime('%H:%M') }}</div>
+                     </div>
+                 </div>
+                 {% else %}
+                 <div class="text-muted" style="text-align: center; padding: 20px;">No recent logs</div>
+                 {% endfor %}
+            </div>
+            
+            <h2 style="margin-top: 32px;">Job Status (24h)</h2>
+            <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                <span>Total Jobs</span>
+                <span class="badge badge-blue">{{ stats.jobs_24h }}</span>
+            </div>
+             <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                <span>Failed</span>
+                <span class="badge badge-danger">{{ stats.failed_jobs }}</span>
+            </div>
+             <div class="flex-between" style="padding: 8px 0;">
+                <span>System Health</span>
+                <span class="badge badge-success">OK</span>
+            </div>
+
+            <h2 style="margin-top: 32px;">AI Provider Spend (Today)</h2>
+            {% for name, cost in stats.provider_costs.items() %}
+            <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                <span>{{ name|capitalize }}</span>
+                <span style="font-weight: 500;">${{ "%.4f"|format(cost) }}</span>
+            </div>
+            {% else %}
+            <div class="text-muted" style="font-size: 0.8rem; padding: 8px 0;">No AI spend recorded today</div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="grid grid-2" style="margin-top: 0px;">
+         <div class="card">
+            <h2>Topic Growth Trends</h2>
+            <div style="position: relative; height: 250px; width: 100%;">
+                <canvas id="topicChart"></canvas>
+            </div>
+        </div>
+         <div class="card">
+            <h2>Crawler Health</h2>
+            <div style="position: relative; height: 250px; width: 100%;">
+                 <canvas id="healthChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Viewed Topics -->
+    <div class="card" style="margin-top: 0;">
+        <h2>Top Viewed Topics</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted); text-align: left;">
+                    <th style="padding: 10px 0;">Topic</th>
+                    <th style="padding: 10px 0; text-align: right;">Views</th>
+                    <th style="padding: 10px 0; text-align: right;">Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for topic_title, view_count, comment_count in stats.top_viewed_topics %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 12px 0; font-weight: 500;">{{ topic_title[:60] }}{% if topic_title|length > 60 %}...{% endif %}</td>
+                    <td style="padding: 12px 0; text-align: right;"><span class="badge badge-blue">{{ view_count or 0 }}</span></td>
+                    <td style="padding: 12px 0; text-align: right;"><span class="badge badge-success">{{ comment_count or 0 }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="text-muted" style="text-align:center; padding: 20px;">No data yet — views will appear as users explore topics.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Chart Configuration
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#334155';
+    
+    // Volume Chart
+    new Chart(document.getElementById('volumeChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ stats.chart_labels | tojson }},
+            datasets: [{
+                label: 'Articles Ingested',
+                data: {{ stats.volume_data | tojson }},
+                backgroundColor: '#6366f1',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Topic Chart
+    new Chart(document.getElementById('topicChart'), {
+        type: 'line',
+        data: {
+             labels: {{ stats.chart_labels | tojson }},
+             datasets: [{
+                label: 'New Topics',
+                data: {{ stats.topic_data | tojson }},
+                borderColor: '#34d399',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(52, 211, 153, 0.1)'
+             }]
+        },
+        options: {
+             responsive: true,
+             maintainAspectRatio: false,
+             plugins: { legend: { display: false } },
+             scales: { y: { beginAtZero: true } }
+        }
+    });
+
+     // Health Chart
+    new Chart(document.getElementById('healthChart'), {
+        type: 'doughnut',
+        data: {
+             labels: ['Active', 'Inactive'],
+             datasets: [{
+                data: [{{ stats.active_sources }}, {{ stats.total_sources - stats.active_sources }}],
+                backgroundColor: ['#34d399', '#334155'],
+                borderWidth: 0
+             }]
+        },
+        options: {
+             responsive: true,
+             maintainAspectRatio: false,
+             cutout: '70%',
+             plugins: {
+                legend: { position: 'right' }
+             }
+        }
+    });
+</script>
+{% endblock %}

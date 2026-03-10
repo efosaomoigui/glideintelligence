@@ -1,0 +1,104 @@
+{% extends "admin_base.html" %}
+
+{% block title %}AI Usage Monitoring | Admin{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-4">
+    <h1>AI Usage & Cost Monitoring</h1>
+    <div class="flex gap-2">
+        <span class="badge badge-blue">Real-Time Tracking Enabled</span>
+        <span class="badge badge-warning">Budget: $5.00/day</span>
+    </div>
+</div>
+
+<div class="grid grid-3 mb-4">
+    <!-- Summary Cards -->
+    <div class="card">
+        <div class="text-sm text-muted mb-2">Total Tokens (All Time)</div>
+        <div style="font-size: 1.5rem; font-weight: 600;">{{ provider_breakdown|sum(attribute='tokens') }}</div>
+    </div>
+    <div class="card">
+        <div class="text-sm text-muted mb-2">Total Cost (All Time)</div>
+        <div style="font-size: 1.5rem; font-weight: 600; color: #fbbf24;">${{ "%.4f"|format(provider_breakdown|sum(attribute='cost')) }}</div>
+    </div>
+    <div class="card">
+        <div class="text-sm text-muted mb-2">Avg Cost/Call</div>
+        {% set total_calls = provider_breakdown|sum(attribute='calls') %}
+        <div style="font-size: 1.5rem; font-weight: 600;">
+            {% if total_calls > 0 %}
+            ${{ "%.4f"|format(provider_breakdown|sum(attribute='cost') / total_calls) }}
+            {% else %}$0.00{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="grid-template-columns: 2fr 1fr;">
+    <!-- Detailed Logs -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Recent API Calls</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Provider</th>
+                    <th>Topic</th>
+                    <th>Tokens</th>
+                    <th>Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log, topic_title in usage_logs %}
+                <tr>
+                    <td class="text-sm">{{ log.timestamp.strftime('%H:%M:%S') }}</td>
+                    <td><span class="badge {% if 'gemini' in log.provider_name.lower() %}badge-success{% else %}badge-blue{% endif %}">{{ log.provider_name }}</span></td>
+                    <td class="text-sm">{{ topic_title or "System Job" }}</td>
+                    <td>{{ log.tokens_used }}</td>
+                    <td style="font-family: monospace;">${{ "%.4f"|format(log.cost_usd) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-muted">No usage logs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Provider Breakdown -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h2>Provider Breakdown</h2>
+            </div>
+            {% for p in provider_breakdown %}
+            <div class="mb-4">
+                <div class="flex-between text-sm mb-1">
+                    <span>{{ p.provider_name }}</span>
+                    <span class="text-muted">{{ p.calls }} calls</span>
+                </div>
+                <div style="background: var(--border); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: var(--primary); height: 100%; width: 100%;"></div>
+                </div>
+                <div class="flex-between mt-1 text-sm">
+                    <span style="color: #fbbf24;">${{ "%.4f"|format(p.cost) }}</span>
+                    <span>{{ p.tokens }} tokens</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Daily Summary (7d)</h2>
+            </div>
+            {% for day in daily_summary %}
+            <div class="flex-between py-2 border-bottom" style="font-size: 0.9rem; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                <span>{{ day.date }}</span>
+                <span style="color: #fbbf24; font-weight: 500;">${{ "%.2f"|format(day.total_cost) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

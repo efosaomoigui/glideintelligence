@@ -1,0 +1,108 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Polls | Glide Intelligence{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-4">
+    <h1>Contextual Poll Analytics</h1>
+    <div>
+        <button onclick="deleteBackedUpPolls()" class="btn btn-primary" style="background: var(--danger, #e74c3c); border-color: var(--danger, #e74c3c);">
+            Delete All Backed-Up Polls
+        </button>
+    </div>
+</div>
+
+<script>
+async function deleteBackedUpPolls() {
+    if (!confirm("Are you sure you want to delete all backed-up polls? This cannot be undone.")) return;
+    
+    try {
+        const res = await fetch('/admin/polls/backed_up', { method: 'DELETE' });
+        const data = await res.json();
+        alert(data.message || "Polls deleted.");
+        window.location.reload();
+    } catch (e) {
+        alert("Failed to delete polls.");
+        console.error(e);
+    }
+}
+</script>
+
+<div class="card mb-4" style="padding: 16px 24px;">
+    <form method="GET" action="/admin/polls" class="flex gap-4" style="align-items: center;">
+        <div style="flex: 1;">
+            <label class="form-label" style="margin-bottom: 4px;">Time Period</label>
+            <select name="time_period" class="form-control" style="padding: 8px;">
+                <option value="all" {% if selected_time == 'all' %}selected{% endif %}>All Time</option>
+                <option value="7days" {% if selected_time == '7days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="30days" {% if selected_time == '30days' %}selected{% endif %}>Last 30 Days</option>
+                <option value="90days" {% if selected_time == '90days' %}selected{% endif %}>Last 90 Days</option>
+            </select>
+        </div>
+        <div style="flex: 1;">
+            <label class="form-label" style="margin-bottom: 4px;">Category Filter</label>
+            <input type="text" name="category" value="{{ selected_category }}" placeholder="e.g. Technology" class="form-control" style="padding: 8px;">
+        </div>
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn">Filter Results</button>
+            <a href="/admin/polls" class="btn btn-outline" style="margin-left: 8px;">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="grid grid-2">
+    {% for poll in polls %}
+    <div class="card" style="margin-bottom: 0;">
+        <div class="flex-between" style="align-items: flex-start; margin-bottom: 12px;">
+            <div style="font-size: 0.8rem; color: var(--primary); font-weight: 600; text-transform: uppercase;">
+                {{ poll.topic.category if poll.topic else 'General' }}
+            </div>
+            <div class="text-sm text-muted">
+                {{ poll.created_at.strftime('%b %d, %Y') if poll.created_at else '' }}
+            </div>
+        </div>
+        
+        <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 1.1rem; line-height: 1.4;">{{ poll.question }}</h3>
+        
+        <div class="text-sm text-muted mb-4" style="line-height: 1.5;">
+            Related to: <a href="http://localhost:3000/topic/{{ poll.topic_id }}" target="_blank" style="color: var(--text);">{{ poll.topic.title if poll.topic else poll.topic_id }}</a>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            {% for opt in poll.options %}
+            <div style="margin-bottom: 10px;">
+                <div class="flex-between text-sm mb-4" style="margin-bottom: 4px;">
+                    <span>{{ opt.option_text }}</span>
+                    <span style="font-weight: 600;">{{ opt.percentage }}% ({{ opt.vote_count }})</span>
+                </div>
+                <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                    <div style="height: 100%; background: var(--primary); width: {{ opt.percentage }}%; border-radius: 3px;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="flex-between" style="border-top: 1px solid var(--border); padding-top: 16px; align-items: center;">
+            <div style="font-weight: 500; font-size: 0.9rem;">
+                Total Votes: {{ poll.total_votes }}
+                {% if poll.is_backed_up %}
+                <span style="margin-left: 8px; font-size: 0.75rem; background: var(--success, #2ecc71); color: white; padding: 2px 6px; border-radius: 4px;">Backed Up</span>
+                {% endif %}
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/admin/polls/{{ poll.id }}/backup" class="btn btn-sm btn-outline" target="_blank" onclick="setTimeout(()=>window.location.reload(), 1000)">
+                    Backup JSON
+                </a>
+                <a href="/admin/polls/{{ poll.id }}/export" class="btn btn-sm btn-outline" target="_blank">
+                    Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 48px; background: var(--card-bg); border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted);">
+        No polls match your criteria. Wait for AI analysis jobs to generate polls.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

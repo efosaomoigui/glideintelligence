@@ -1,0 +1,131 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Users | Glide Admin{% endblock %}
+
+{% block content %}
+    <div class="flex-between" style="margin-bottom: 32px;">
+        <h1>User Management</h1>
+        <button onclick="document.getElementById('addUserModal').style.display='flex'" class="btn">Add New User</button>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Full Name</th>
+                    <th>Password</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.full_name or '-' }}</td>
+                    <td>
+                        {% if user.raw_password %}
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="pwd-mask-{{user.id}}">••••••••</span>
+                            <span class="pwd-text-{{user.id}}" style="display: none; font-family: monospace;">{{ user.raw_password }}</span>
+                            <button onclick="togglePwd({{user.id}})" class="btn btn-sm" style="background: transparent; padding: 4px; border: 1px solid var(--border); color: var(--text-muted);" title="Show/Hide Password">
+                                <svg class="pwd-icon-{{user.id}}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        {% else %}
+                        <span class="text-muted" style="font-size: 0.8rem;">Manual / Social Login</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_superuser %}
+                        <span class="badge badge-warning">Admin</span>
+                        {% else %}
+                        <span class="badge badge-success">User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                        <span style="color: #34d399;">Active</span>
+                        {% else %}
+                        <span style="color: #f87171;">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <!-- Toggle Superuser -->
+                            <form action="/api/admin/users/{{ user.id }}/role" method="post">
+                                <input type="hidden" name="is_superuser" value="{{ 'false' if user.is_superuser else 'true' }}">
+                                <button type="submit" class="btn btn-sm" style="background: rgba(255,255,255,0.1); font-size: 0.7rem;">
+                                    {{ "Demote" if user.is_superuser else "Promote" }}
+                                </button>
+                            </form>
+                            
+                            <!-- Toggle Active -->
+                            <form action="/api/admin/users/{{ user.id }}/toggle-active" method="post">
+                                <button type="submit" class="btn btn-sm" style="background: rgba(255,255,255,0.1); font-size: 0.7rem;">
+                                    {{ "Deactivate" if user.is_active else "Activate" }}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Simple Modal for Adding User -->
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 400px; max-width: 90%;">
+            <h2>Create New User</h2>
+            <form action="/api/admin/users" method="post">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="full_name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="is_superuser" value="true">
+                        <span style="font-size: 0.9rem;">Grant Admin Privileges</span>
+                    </label>
+                </div>
+                <div class="flex-between" style="margin-top: 24px;">
+                    <button type="button" onclick="document.getElementById('addUserModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--border);">Cancel</button>
+                    <button type="submit" class="btn">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function togglePwd(userId) {
+            const mask = document.querySelector('.pwd-mask-' + userId);
+            const text = document.querySelector('.pwd-text-' + userId);
+            const icon = document.querySelector('.pwd-icon-' + userId);
+            
+            if (text.style.display === 'none') {
+                text.style.display = 'inline';
+                mask.style.display = 'none';
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            } else {
+                text.style.display = 'none';
+                mask.style.display = 'inline';
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            }
+        }
+    </script>
+{% endblock %}

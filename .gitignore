@@ -1,0 +1,33 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.*
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+db.sqlite3
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+.docker_temp/
+
+# OS files
+.DS_Store
+Thumbs.db
