@@ -17,7 +17,7 @@ async def seed_ollama():
         if existing:
             print(f"Ollama provider already exists with priority {existing.priority}")
             print("Updating configuration...")
-            existing.model = "llama3.2:3b-instruct"
+            existing.model = "llama3.2"
             existing.enabled = True
             existing.priority = 8
             existing.type = AIProviderType.OPEN_SOURCE
@@ -26,7 +26,7 @@ async def seed_ollama():
             ollama = AIProvider(
                 name="Ollama",
                 type=AIProviderType.OPEN_SOURCE,
-                model="llama3.2:3b-instruct",
+                model="llama3.2",
                 api_key=None,  # Not needed for Ollama
                 enabled=True,
                 priority=8  # Between BART (5) and Gemini (10)
