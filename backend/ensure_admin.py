@@ -13,10 +13,12 @@ async def ensure_admin_user():
             print("Admin user not found. Creating one...")
             user = User(
                 email="admin@example.com",
+                username="admin",
                 hashed_password=get_password_hash("admin"),
                 full_name="Admin User",
                 is_active=True,
-                is_superuser=True
+                is_superuser=True,
+                role="admin"
             )
             db.add(user)
             await db.commit()
