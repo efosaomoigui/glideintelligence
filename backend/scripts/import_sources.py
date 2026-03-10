@@ -14,11 +14,26 @@ from app.models import Source
 from app.models.source import SourceType, SourceCategory
 
 async def import_sources():
-    if not os.path.exists("sources_dump.json"):
-        print("Error: sources_dump.json not found.")
+    # Check multiple possible locations for the dump file
+    possible_paths = [
+        "sources_dump.json",
+        "/app/sources_dump.json",
+        os.path.join(os.path.dirname(__file__), "..", "sources_dump.json"),
+        os.path.join(os.path.dirname(__file__), "sources_dump.json")
+    ]
+    
+    json_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            json_path = path
+            break
+
+    if not json_path:
+        print(f"Error: sources_dump.json not found. Checked: {possible_paths}")
+        print("Please ensure you ran: docker cp backend/sources_dump.json glideintelligence-backend-1:/app/sources_dump.json")
         return
 
-    print("Importing sources to database...")
+    print(f"Importing sources from {json_path}...")
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     with open("sources_dump.json", "r") as f:
