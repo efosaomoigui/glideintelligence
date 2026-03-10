@@ -36,7 +36,7 @@ async def import_sources():
     print(f"Importing sources from {json_path}...")
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
-    with open("sources_dump.json", "r") as f:
+    with open(json_path, "r") as f:
         data = json.load(f)
         
     async with async_session() as session:
