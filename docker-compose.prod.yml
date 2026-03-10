@@ -80,6 +80,46 @@ services:
       - db
       - redis
 
+  # OpenClaw Intelligence/Enhancement Agent
+  openclaw_agents:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.openclaw_agents.main
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - db
+      - redis
+
+  # OpenClaw Completeness/Validation Agent
+  completeness_agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.openclaw_agents.completeness
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      - db
+
+  # OpenClaw Categorization Correction Agent
+  category_correction_agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.openclaw_agents.category_correction
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - db
+      - redis
+
   # Database with Vector Support
   db:
     image: pgvector/pgvector:pg16
