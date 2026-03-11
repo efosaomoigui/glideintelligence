@@ -156,12 +156,12 @@ class AIContentGenerator:
                     elif provider.name.lower() in ["claude", "anthropic"]:
                         from app.services.ai.claude_service import ClaudeService
                         service = ClaudeService(api_key=provider.api_key)
-                        return await service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
+                        return service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
                     
                     elif provider.name.lower() == "openai":
                         from app.services.ai.openai_service import OpenAIService
                         service = OpenAIService(api_key=provider.api_key)
-                        return await service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
+                        return service.generate_content(prompt, model=provider.model, max_tokens=max_tokens)
                     
                     elif provider.name.lower() == "ollama":
                         from app.services.ai.ollama_service import ollama_service
