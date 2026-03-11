@@ -22,8 +22,8 @@ interface Topic {
 
 async function getHeroTopics(): Promise<Topic[]> {
   try {
-    // Server-side fetch - bypasses browser CORS entirely!
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/home`, {
+    // Server-side fetch - use backend service name in Docker
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://backend:8000"}/api/home`, {
       cache: "no-store", // Ensure fresh data
     });
     
