@@ -178,21 +178,39 @@ class NewsService:
              comments = result.scalars().all()
 
         output = []
+        import logging
         for c in comments:
-            full_name = c.user.full_name or c.user.username
-            role = c.user.role.title() if c.user.role else "Member"
-            
-            # Simple color generator
-            colors = ["#c0392b", "#27ae60", "#2980b9", "#8e44ad", "#f39c12", "#2c3e50"]
-            color = colors[len(full_name) % len(colors)]
-            
-            output.append({
-                "initials": "".join([n[0] for n in full_name.split() if n])[:2].upper(),
-                "name": full_name,
-                "role": role,
-                "quote": c.content,
-                "color": color
-            })
+            try:
+                # Eager loaded user check
+                user_obj = c.user if 'user' in c.__dict__ else None
+                if not user_obj:
+                    # Try to access normally as fallback (might trigger lazy-load if not detached)
+                    try:
+                        user_obj = c.user
+                    except Exception:
+                        continue
+                
+                if not user_obj:
+                    continue
+                    
+                full_name = user_obj.full_name or user_obj.username
+                role = user_obj.role.title() if user_obj.role else "Member"
+                
+                # Simple color generator
+                colors = ["#c0392b", "#27ae60", "#2980b9", "#8e44ad", "#f39c12", "#2c3e50"]
+                color = colors[len(full_name) % len(colors)]
+                
+                output.append({
+                    "initials": "".join([n[0] for n in full_name.split() if n])[:2].upper(),
+                    "name": full_name,
+                    "role": role,
+                    "quote": c.content,
+                    "color": color
+                })
+            except Exception as e:
+                logging.error(f"Error processing hot comment: {e}")
+                continue
+        
         return output
 
     def _get_pulse_data(self, topics) -> dict:

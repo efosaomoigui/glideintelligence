@@ -37,6 +37,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global Exception Handler
+import traceback
+import logging
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Global Exception caught: {str(exc)}")
+    logging.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc), "traceback": traceback.format_exc() if settings.DEBUG else None}
+    )
+
 # Initialize Prometheus
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
