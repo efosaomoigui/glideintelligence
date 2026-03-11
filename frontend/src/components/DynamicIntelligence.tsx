@@ -212,7 +212,7 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
         {/* TOPICS FEED */}
         <div className="topics-section">
           <div className="section-header">
-            <h2 className="section-title">Today&apos;s Glide Intelligence</h2>
+            <h2 className="section-title">Today&apos;s Glide</h2>
             {/* Desktop filter (hidden on mobile) */}
             <div className="time-filter">
               <button 

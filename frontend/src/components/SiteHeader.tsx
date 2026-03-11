@@ -14,7 +14,7 @@ export default function SiteHeader() {
       <div className="header-top">
         <div>
           <Link href="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Gl<span className="accent">Intel</span>
+            Glide<span className="accent">Intelligence</span>
           </Link>
           <div className="tagline">Making Sense of the News</div>
         </div>

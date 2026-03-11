@@ -721,6 +721,15 @@ function FlyoutInnerContent({
   const [liveViewCount, setLiveViewCount] = useState<number>(initialViews);
   const [liveCommentCount, setLiveCommentCount] = useState<number>(initialComments);
 
+  // Refs for unmount cleanup so it uses the LATEST numbers, not the mount-time closure numbers
+  const liveViewCountRef = useRef(liveViewCount);
+  const liveCommentCountRef = useRef(liveCommentCount);
+
+  useEffect(() => {
+    liveViewCountRef.current = liveViewCount;
+    liveCommentCountRef.current = liveCommentCount;
+  }, [liveViewCount, liveCommentCount]);
+
   // Poll state
   const [activePoll, setActivePoll] = useState<any>(undefined);
   const [userVotedOption, setUserVotedOption] = useState<number | null>(null);
@@ -794,7 +803,7 @@ function FlyoutInnerContent({
     return () => {
       const id = topicData.id;
       window.dispatchEvent(new CustomEvent("topic-viewed", {
-        detail: { topicId: id, viewCount: liveViewCount, commentCount: liveCommentCount }
+        detail: { topicId: id, viewCount: liveViewCountRef.current, commentCount: liveCommentCountRef.current }
       }));
       delete (window as any)[`__fetchComments_${id}`];
       delete (window as any)[`__fetchPolls_${id}`];

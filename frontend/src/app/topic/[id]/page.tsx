@@ -81,7 +81,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
       <header className="site-header">
         <div className="header-top">
           <div className="logo">
-            Gl<span className="accent">Intel News</span>
+            Glide<span className="accent">Intelligence</span>
           </div>
 
           <nav className="breadcrumb">
@@ -475,7 +475,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <div className="logo">Gl<span className="accent">Intel</span></div>
+              <div className="logo">Glide<span className="accent">Intelligence</span></div>
               <p className="footer-tagline">
                 We don't publish news. We make sense of it. AI-powered intelligence platform for Nigeria & West Africa.
               </p>
@@ -490,7 +490,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 Gl Intel. All rights reserved.</span>
+            <span>© 2026 GlideIntelligence. All rights reserved.</span>
             <span>Built in Lagos, Nigeria 🇳🇬</span>
           </div>
         </div>

@@ -17,7 +17,7 @@ export default function SiteFooter() {
         <div className="footer-top">
           <div className="footer-brand">
             <div className="logo">
-              Gl<span className="accent">Intel</span>
+              Glide<span className="accent">Intelligence</span>
             </div>
             <p className="footer-tagline">
               We don&apos;t publish news. We make sense of it. Glide-powered
@@ -68,7 +68,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="footer-bottom">
-          <span>© 2026 Gl Intel News. All rights reserved.</span>
+          <span>© 2026 GlideIntelligence News. All rights reserved.</span>
           <span>Powered by Scriptwall</span>
         </div>
       </div>
