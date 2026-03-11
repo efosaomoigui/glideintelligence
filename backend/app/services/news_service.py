@@ -212,7 +212,7 @@ class NewsService:
             if hasattr(t, 'sentiment_score') and t.sentiment_score is not None:
                 total_score += t.sentiment_score
                 scored_count += 1
-            elif hasattr(t, 'sentiment_breakdown') and t.sentiment_breakdown:
+            elif 'sentiment_breakdown' in t.__dict__ and t.sentiment_breakdown:
                 # sentiment_breakdown is a list; aggregate dimension_level scores
                 breakdown = t.sentiment_breakdown
                 if isinstance(breakdown, list) and breakdown:
@@ -315,11 +315,14 @@ class NewsService:
              
         # 2. AI Brief and Bullets
         # Priority: executive_summary > summary. For bullets: what_you_need_to_know > facts
-        if topic.analysis and (topic.analysis.executive_summary or topic.analysis.summary):
-            topic.ai_brief = topic.analysis.executive_summary or topic.analysis.summary
+        # Safe check for analysis relationship
+        analysis = topic.analysis if 'analysis' in topic.__dict__ else None
+        
+        if analysis and (getattr(analysis, 'executive_summary', None) or getattr(analysis, 'summary', None)):
+            topic.ai_brief = getattr(analysis, 'executive_summary', None) or analysis.summary
             topic.bullets = (
-                topic.analysis.what_you_need_to_know
-                or topic.analysis.facts
+                getattr(analysis, 'what_you_need_to_know', None)
+                or getattr(analysis, 'facts', None)
                 or []
             )
         else:
@@ -356,11 +359,11 @@ class NewsService:
         flattened_articles = []
         source_counts = {}
         
-        if hasattr(topic, 'article_associations'):
+        if 'article_associations' in topic.__dict__:
             for assoc in topic.article_associations:
-                art = assoc.article
+                art = assoc.article if 'article' in assoc.__dict__ else None
                 if art:
-                    art.source_name = art.source.name if art.source else "Unknown"
+                    art.source_name = getattr(art.source, 'name', "Unknown") if 'source' in art.__dict__ else "Unknown"
                     flattened_articles.append(art)
                     source_counts[art.source_name] = source_counts.get(art.source_name, 0) + 1
         

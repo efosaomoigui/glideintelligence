@@ -19,9 +19,17 @@ async def create_comment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    import logging
     comment_data = comment_in.model_dump()
+    logging.info(f"Creating comment: {comment_data}")
     comment_data.pop("article_id", None)
     
+    # Treat 0 as None for optional foreign keys (common in Swagger test data)
+    if comment_data.get("topic_id") == 0:
+        comment_data["topic_id"] = None
+    if comment_data.get("parent_id") == 0:
+        comment_data["parent_id"] = None
+
     comment = Comment(
         **comment_data,
         user_id=current_user.id

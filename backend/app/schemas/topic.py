@@ -155,10 +155,10 @@ class TopicTrendingSchema(TopicSchema):
             if val is not None:
                 data[attr] = val
 
-        # sentiment_breakdown is an ORM list of model objects — safe to getattr (column not relationship issue)
-        try:
+        # sentiment_breakdown is an ORM relationship — only read if loaded
+        if 'sentiment_breakdown' in obj_dict:
             data['sentiment_breakdown'] = list(getattr(values, 'sentiment_breakdown', []) or [])
-        except Exception:
+        else:
             data['sentiment_breakdown'] = []
 
         # Private enriched data — read from raw __dict__ to bypass SQLAlchemy descriptors
