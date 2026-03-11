@@ -7,7 +7,7 @@ import "./topic.css";
 // In a real app, you would likely fetch this by ID/Slug 
 async function getTopicDetails(idStr: string) {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://backend:8000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     // Try to fetch by ID or slug using the dedicated endpoint
     const endpoint = isNaN(Number(idStr)) ? `slug/${idStr}` : idStr;
     const res = await fetch(`${apiUrl}/api/topic/${endpoint}`, {

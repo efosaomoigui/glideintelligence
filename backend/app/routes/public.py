@@ -183,13 +183,18 @@ def random_responses(topics) -> int:
 @router.get("/topics/trending", response_model=PaginatedResponse[TopicTrendingSchema])
 @cached(ttl=300, prefix="trending")
 async def get_trending_topics(
-    filter: str = Query("all", regex="^(all|today|week|month|developing)$"),
+    filter: str = Query("all", pattern="^(all|today|week|month|developing)$"),
     category: Optional[str] = Query(None),
     params: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
     service = NewsService(db)
-    items, total = await service.get_trending_topics(params.page, params.limit, filter, category)
+    items, total = await service.get_trending_topics(
+        page=params.page, 
+        limit=params.limit, 
+        filter_type=filter, 
+        category=category
+    )
     
     return PaginatedResponse(
         items=items,

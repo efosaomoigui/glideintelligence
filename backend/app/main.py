@@ -40,11 +40,15 @@ app.add_middleware(
 # Global Exception Handler
 import traceback
 import logging
-from fastapi import Request
+from fastapi import Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, (HTTPException, RequestValidationError)):
+        raise exc
+        
     logging.error(f"Global Exception caught: {str(exc)}")
     logging.error(traceback.format_exc())
     return JSONResponse(

@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, make_transient
 from typing import List, Optional, Tuple
+from datetime import datetime, timedelta
 import math
 
 from app.models import (
@@ -15,9 +16,7 @@ class NewsService:
 
     async def get_home_data(self) -> dict:
         """Fetch data for the home page (trending topics and featured articles)."""
-        from datetime import datetime, timedelta
         
-        from sqlalchemy.orm import make_transient
 
         # 1. Trending topics with loaded relations
         trending_topics_query = (
