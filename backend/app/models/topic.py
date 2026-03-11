@@ -105,7 +105,7 @@ class TopicSentimentBreakdown(Base, TimestampMixin):
     sentiment: Mapped[str] = mapped_column(String(20))
     sentiment_score: Mapped[float] = mapped_column(Float)
     percentage: Mapped[float] = mapped_column(Float)
-    icon: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     topic: Mapped["Topic"] = relationship("Topic", back_populates="sentiment_breakdown")

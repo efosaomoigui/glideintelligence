@@ -37,7 +37,7 @@ class IntelligenceCard(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     topic_id: Mapped[int] = mapped_column(ForeignKey("topics.id"), unique=True, index=True)
     category: Mapped[str] = mapped_column(String(50))
-    icon: Mapped[str] = mapped_column(String(10))
+    icon: Mapped[str] = mapped_column(String(50))
     title: Mapped[str] = mapped_column(String(100))
     description: Mapped[str] = mapped_column(String(200))
     trend_percentage: Mapped[str] = mapped_column(String(10))

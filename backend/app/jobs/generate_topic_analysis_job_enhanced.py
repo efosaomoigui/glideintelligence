@@ -290,7 +290,7 @@ class GenerateTopicAnalysisJob:
                 sentiment=safe_encode(item["sentiment"]),
                 sentiment_score=item["sentiment_score"],
                 percentage=item["percentage"],
-                icon=safe_encode(item.get("icon", "")),
+                icon=safe_encode(item.get("icon", ""))[:50],
                 description=safe_encode(item.get("description", ""))
             )
             self.db.add(sentiment)
@@ -353,7 +353,7 @@ class GenerateTopicAnalysisJob:
         card = IntelligenceCard(
             topic_id=topic_id,
             category=safe_encode(card_data.get("category", category)),
-            icon=safe_encode(card_data.get("icon", "")),
+            icon=safe_encode(card_data.get("icon", ""))[:50],
             title=safe_encode(card_data.get("title", "")),
             description=safe_encode(card_data.get("description", "")),
             trend_percentage=safe_encode(card_data.get("trend_percentage", "")),

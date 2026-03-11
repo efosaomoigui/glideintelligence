@@ -201,7 +201,7 @@ Respond ONLY with a valid JSON object matching this exact structure:
                         sentiment=safe_encode(item.get("sentiment", "neutral")),
                         sentiment_score=item.get("sentiment_score", 0.0),
                         percentage=item.get("percentage", 100),
-                        icon=safe_encode(item.get("icon", "📊")),
+                        icon=safe_encode(item.get("icon", "📊"))[:50],
                         description=safe_encode(item.get("description", ""))
                     ))
             
@@ -227,7 +227,7 @@ Respond ONLY with a valid JSON object matching this exact structure:
                     regional_impact = RegionalImpact(
                         topic_id=topic.id,
                         impact_category=cat_key,
-                        icon=safe_encode(impact_data.get("icon", "📝")),
+                        icon=safe_encode(impact_data.get("icon", "📝"))[:50],
                         title=safe_encode(impact_data.get("title", "Impact")),
                         value=safe_encode(impact_data.get("value", "Identified")),
                         severity=safe_encode(impact_data.get("severity", "medium")),
@@ -243,7 +243,7 @@ Respond ONLY with a valid JSON object matching this exact structure:
                 session.add(IntelligenceCard(
                     topic_id=topic.id,
                     category=safe_encode(card_data.get("category", topic.category)),
-                    icon=safe_encode(card_data.get("icon", "📊")),
+                    icon=safe_encode(card_data.get("icon", "📊"))[:50],
                     title=safe_encode(card_data.get("title", topic.title[:60])),
                     description=safe_encode(card_data.get("description", "")),
                     trend_percentage=safe_encode(card_data.get("trend_percentage", "0%")),
