@@ -25,11 +25,15 @@ origins = [
     "http://localhost:3000",
     "http://localhost:8000",
     "http://127.0.0.1:3000",
+    "http://34.68.137.214:3000",
+    "http://34.68.137.214",
+    "*" # Fallback for IP-based rapid testing
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex="http://.*", # Allow any subdomains or dynamic IPs for now
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
