@@ -24,9 +24,6 @@ class NewsService:
             select(Topic)
             .options(
                  selectinload(Topic.analysis),
-                 selectinload(Topic.sentiment_breakdown),
-                 selectinload(Topic.source_perspectives),
-                 selectinload(Topic.regional_impacts),
                  selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
             )
             .where(Topic.is_trending == True)
@@ -44,9 +41,6 @@ class NewsService:
                 select(Topic)
                 .options(
                      selectinload(Topic.analysis),
-                     selectinload(Topic.sentiment_breakdown),
-                     selectinload(Topic.source_perspectives),
-                     selectinload(Topic.regional_impacts),
                      selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
                 )
              )
@@ -405,7 +399,11 @@ class NewsService:
             topic.is_premium = False
 
         # 6. Source Perspectives — use real DB data if available, else generate topic-specific mock
-        real_perspectives = list(topic.source_perspectives) if topic.source_perspectives else []
+        # Safe check for loaded relationship in async session
+        real_perspectives = []
+        if 'source_perspectives' in topic.__dict__:
+             real_perspectives = list(topic.source_perspectives) if topic.source_perspectives else []
+        
         if not real_perspectives:
             # Derive sentiments from topic's own overall_sentiment and score
             overall = (topic.overall_sentiment or "neutral").lower()
@@ -456,7 +454,10 @@ class NewsService:
             object.__setattr__(topic, '_perspectives_data', real_perspectives)
 
         # 7. Regional Impacts — use real DB data if available, else generate topic-specific mock
-        real_impacts = list(topic.regional_impacts) if topic.regional_impacts else []
+        real_impacts = []
+        if 'regional_impacts' in topic.__dict__:
+             real_impacts = list(topic.regional_impacts) if topic.regional_impacts else []
+
         if not real_impacts:
             cat = (topic.category or "General").title()
             overall = (topic.overall_sentiment or "neutral").lower()
@@ -509,9 +510,6 @@ class NewsService:
         offset = (page - 1) * limit
         query = select(Topic).options(
              selectinload(Topic.analysis),
-             selectinload(Topic.sentiment_breakdown),
-             selectinload(Topic.source_perspectives),
-             selectinload(Topic.regional_impacts),
              selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
         )
         

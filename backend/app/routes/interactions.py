@@ -28,7 +28,15 @@ async def create_comment(
     )
     db.add(comment)
     await db.commit()
-    await db.refresh(comment)
+    
+    # Re-fetch with loaded user to avoid lazy-load crash in Pydantic serialization
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Comment)
+        .options(selectinload(Comment.user))
+        .where(Comment.id == comment.id)
+    )
+    comment = result.scalar_one()
 
     # Increment Topic comment_count atomically
     if comment_in.topic_id:
@@ -168,7 +176,15 @@ async def vote_in_poll(
     )
     
     await db.commit()
-    await db.refresh(vote)
+    
+    # Re-fetch with loaded user/poll to avoid lazy-load crash
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(PollVote)
+        .options(selectinload(PollVote.user))
+        .where(PollVote.id == vote.id)
+    )
+    vote = result.scalar_one()
     return vote
 
 # Admin: Create Poll
