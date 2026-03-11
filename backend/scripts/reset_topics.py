@@ -20,7 +20,7 @@ async def reset_processing_topics():
             logger.info("Resetting topics stuck in 'processing' status...")
             result = await session.execute(
                 update(Topic)
-                .where(Topic.analysis_status == 'processing')
+                .where(Topic.analysis_status.in_(["processing", "failed", "pipeline_failed"]))
                 .values(analysis_status='pending')
             )
             await session.commit()
