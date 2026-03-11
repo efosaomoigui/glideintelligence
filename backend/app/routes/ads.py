@@ -8,7 +8,7 @@ from app.schemas.ads import AdResponse
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
 
-@router.get("/placement/{placement_group}", response_model=AdResponse)
+@router.get("/placement/{placement_group}", response_model=Optional[AdResponse])
 async def get_ad_for_placement(
     placement_group: str,
     db: AsyncSession = Depends(get_db)
@@ -18,9 +18,7 @@ async def get_ad_for_placement(
     service = AdService(db)
     ad = await service.get_ad_for_placement(placement_group)
     
-    if not ad:
-        raise HTTPException(status_code=404, detail="No active ads for this placement")
-        
+    # Return 200 OK with null instead of 404 to reduce noise in browser console
     return ad
 
 @router.post("/render/{ad_id}")

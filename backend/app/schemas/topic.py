@@ -148,12 +148,25 @@ class TopicTrendingSchema(TopicSchema):
             except Exception:
                 pass
 
-        # Frontend-enriched attrs (set via regular setattr in _enrich_topic_for_frontend or loaded relationships)
-        for attr in ('ai_brief', 'bullets', 'updated_at_str', 'sources', 'engagement', 'intelligence_level', 'is_premium',
-                     'impact', 'articles', 'analysis', 'intelligence_card', 'trends', 'videos'):
-            val = obj_dict.get(attr) or getattr(values, attr, None)
+        # Frontend-enriched attrs (computed strings or plain dicts)
+        for attr in ('ai_brief', 'bullets', 'updated_at_str', 'sources', 'engagement', 'intelligence_level', 'is_premium', 'impact'):
+            val = obj_dict.get(attr)
             if val is not None:
                 data[attr] = val
+
+        # Relationship-based fields: ONLY read if in obj_dict (meaning they were loaded or explicitly set)
+        for rel in ('analysis', 'articles', 'intelligence_card', 'trends', 'videos', 'sentiment_breakdown'):
+            if rel in obj_dict:
+                val = getattr(values, rel, None)
+                if val is not None:
+                    # Convert to list if it's a collection
+                    data[rel] = list(val) if isinstance(val, (list, tuple)) or hasattr(val, '__iter__') and not isinstance(val, (dict, str)) else val
+            else:
+                # Default to empty/None for missing relationships to avoid 500s on transition objects
+                if rel in ('articles', 'trends', 'videos', 'sentiment_breakdown'):
+                    data[rel] = []
+                else:
+                    data[rel] = None
 
         # sentiment_breakdown is an ORM relationship — only read if loaded
         if 'sentiment_breakdown' in obj_dict:

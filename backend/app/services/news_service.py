@@ -556,9 +556,21 @@ class NewsService:
              # Topics with developing status OR trending
              query = query.where(or_(Topic.status == "developing", Topic.is_trending == True))
         
-        # Count total
-        count_query = select(func.count(Topic.id)).where(query.whereclause)
-        total = (await self.db.execute(count_query)).scalar() or 0
+        # Count total — build a fresh count query to avoid whereclause issues
+        count_q = select(func.count(Topic.id)).where(Topic.status.notin_(['archived', 'error']))
+        if category and category.lower() != "all":
+            count_q = count_q.where(func.lower(Topic.category) == category.lower())
+        
+        if filter_type == "today":
+            count_q = count_q.where(Topic.updated_at >= now - timedelta(days=1))
+        elif filter_type == "week":
+            count_q = count_q.where(Topic.updated_at >= now - timedelta(weeks=1))
+        elif filter_type == "month":
+            count_q = count_q.where(Topic.updated_at >= now - timedelta(days=30))
+        elif filter_type == "developing":
+             count_q = count_q.where(or_(Topic.status == "developing", Topic.is_trending == True))
+
+        total = (await self.db.execute(count_q)).scalar() or 0
 
         # Fetch items
         items_query = (
