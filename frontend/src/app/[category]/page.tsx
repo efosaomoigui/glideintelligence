@@ -353,6 +353,7 @@ export default function CategoryPage() {
   const sidebarTrending = apiTopics.length > 0
     ? apiTopics.slice(0, 3).map((t: any) => ({
         id: t.id,
+        slug: t.slug || t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
         title: t.title,
         views: t.engagement?.views || `${t.view_count || 0} views`,
         timeAgo: t.updated_at_str || "recently",
@@ -360,17 +361,17 @@ export default function CategoryPage() {
     : [];
 
   const tickerItems = sidebarTrending.length > 0
-    ? sidebarTrending.map((t: any) => ({ id: t.id, title: t.title }))
+    ? sidebarTrending.map((t: any) => ({ id: t.id, slug: t.slug, title: t.title }))
     : [
         { id: "static-1", title: "Synthesizing latest intelligence..." },
         { id: "static-2", title: "Awaiting data pipeline ingestion..." }
       ];
 
-  const handleTickerClick = (topicId: string | number) => {
-    if (topicId.toString().startsWith("static")) return;
+  const handleTickerClick = (item: { id: string | number; slug?: string }) => {
+    if (item.id.toString().startsWith("static")) return;
     window.dispatchEvent(
       new CustomEvent("open-flyout", {
-        detail: { type: "topic", id: String(topicId) },
+        detail: { type: "topic", id: String(item.id), slug: item.slug },
       })
     );
   };
@@ -388,7 +389,7 @@ export default function CategoryPage() {
             (item, idx) => (
               <span 
                 key={`${item.id}-${idx}`} 
-                onClick={() => handleTickerClick(item.id)}
+                onClick={() => handleTickerClick(item)}
                 style={{ cursor: item.id.toString().startsWith("static") ? "default" : "pointer" }}
               >
                 {item.title}

@@ -13,6 +13,7 @@ export default function Ticker() {
         if (data && Array.isArray(data.items)) {
           setItems(data.items.slice(0, 10).map((t: any) => ({
             id: t.id,
+            slug: t.slug || t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
             title: t.title
           })));
         }
@@ -21,10 +22,10 @@ export default function Ticker() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleTopicClick = (topicId: string | number) => {
+  const handleTopicClick = (item: { id: string | number; slug: string }) => {
     window.dispatchEvent(
       new CustomEvent("open-flyout", {
-        detail: { type: "topic", topicId: String(topicId) },
+        detail: { type: "topic", id: String(item.id), slug: item.slug },
       })
     );
   };
@@ -43,7 +44,7 @@ export default function Ticker() {
         {[...displayItems, ...displayItems].map((item, idx) => (
           <span 
             key={`${item.id}-${idx}`} 
-            onClick={() => item.id.toString().startsWith("static") ? null : handleTopicClick(item.id)}
+            onClick={() => item.id.toString().startsWith("static") ? null : handleTopicClick(item as any)}
             style={{ cursor: item.id.toString().startsWith("static") ? "default" : "pointer" }}
           >
             {item.title}
