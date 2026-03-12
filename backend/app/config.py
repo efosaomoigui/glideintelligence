@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str
     POSTGRES_PORT: str
     DATABASE_URL: str
+    DB_POOL_TYPE: str = "QueuePool" # QueuePool or NullPool
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_RECYCLE: int = 3600 # 1 hour
