@@ -298,7 +298,7 @@ function SearchFlyoutContent() {
                 padding: "16px 20px 16px 52px",
                 borderRadius: "8px",
                 outline: "none",
-                fontFamily: "var(--font-heading)"
+                fontFamily: "var(--serif)"
               }}
               autoFocus
             />
@@ -371,7 +371,7 @@ function SearchFlyoutContent() {
                         </div>
 
                         {/* Title */}
-                        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "#fff", lineHeight: 1.35, marginBottom: "8px", fontFamily: "var(--font-heading)" }}>
+                        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "#fff", lineHeight: 1.35, marginBottom: "8px", fontFamily: "var(--serif)" }}>
                           {t.title}
                         </div>
 
@@ -475,7 +475,7 @@ function SubscribeFlyoutContent() {
            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "48px", height: "48px", borderRadius: "50%", background: "rgba(var(--accent-rgb, 59,130,246),0.15)", color: "var(--accent)", marginBottom: "24px" }}>
              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
            </div>
-           <h2 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#fff", marginBottom: "16px", fontFamily: "var(--font-heading)" }}>Premium Plans in Development</h2>
+           <h2 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#fff", marginBottom: "16px", fontFamily: "var(--serif)" }}>Premium Plans in Development</h2>
            <p style={{ fontSize: "1.05rem", color: "#999", lineHeight: 1.6, marginBottom: "32px" }}>
              We are currently refining our Pro and Team intelligence tiers. Join the free waitlist today and you'll be the first to know when advanced AI querying and custom source tracking become available.
            </p>

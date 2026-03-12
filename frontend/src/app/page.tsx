@@ -35,7 +35,9 @@ export default function Home() {
           <AIPulse />
           <SidebarAdCard />
           <CommunityVoices />
-          <QuickPoll />
+          <div className="quick-poll">
+            <QuickPoll />
+          </div>
         </aside>
       </DynamicIntelligence>
 
@@ -63,7 +65,9 @@ export default function Home() {
           icon="📊"
           defaultOpen={false}
         >
-          <QuickPoll />
+          <div className="quick-poll">
+            <QuickPoll />
+          </div>
         </MobileSidebarCollapsible>
       </div>
 

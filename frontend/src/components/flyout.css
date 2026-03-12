@@ -222,7 +222,7 @@ body.flyout-open {
 }
 
 .topic-title-flyout {
-  font-family: var(--font-heading);
+  font-family: var(--serif);
   font-size: 3.2rem;
   font-weight: 800;
   line-height: 1.15;
@@ -301,7 +301,7 @@ body.flyout-open {
 }
 
 .section-title-flyout {
-  font-family: var(--font-heading);
+  font-family: var(--serif);
   font-size: 1.8rem;
   font-weight: 700;
   margin-bottom: 24px;
@@ -320,7 +320,7 @@ body.flyout-open {
 }
 
 .intelligence-content-flyout h3 {
-  font-family: var(--font-heading);
+  font-family: var(--serif);
   font-size: 1.4rem;
   font-weight: 700;
   margin: 36px 0 20px;
@@ -551,7 +551,7 @@ body.flyout-open {
 }
 
 .sidebar-title-flyout {
-  font-family: var(--font-heading);
+  font-family: var(--serif);
   font-size: 1.2rem;
   font-weight: 700;
   margin-bottom: 20px;
