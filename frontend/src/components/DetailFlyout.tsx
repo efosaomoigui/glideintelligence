@@ -1031,13 +1031,13 @@ function FlyoutInnerContent({
                    {topicData.analysis?.sentiment_summary && (
                     <div style={{ marginBottom: '1rem' }}>
                       <h3 style={{ fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '0.4rem' }}>Overall Sentiment</h3>
-                      <p style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{topicData.analysis.sentiment_summary}</p>
+                      <p style={{ fontSize: '1.0rem', lineHeight: '1.6' }}>{topicData.analysis.sentiment_summary}</p>
                     </div>
                   )}
                   {topicData.analysis?.framing_overview && (
                     <div>
                       <h3 style={{ fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '0.4rem' }}>Framing Overview</h3>
-                      <p style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>{topicData.analysis.framing_overview}</p>
+                      <p style={{ fontSize: '1.0rem', lineHeight: '1.6' }}>{topicData.analysis.framing_overview}</p>
                     </div>
                   )}
                 </div>
