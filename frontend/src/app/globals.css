@@ -718,7 +718,7 @@ img {
 
 /* AI SUMMARY - PILLAR 2 */
 .ai-brief {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #eef0f3 0%, #f8f9fa 100%);
   border-left: 3px solid var(--accent-warm);
   padding: 20px;
   border-radius: 8px;
@@ -732,7 +732,7 @@ img {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--accent-warm);
+  color: #b35c00;
   margin-bottom: 12px;
 }
 .brief-label svg {
@@ -806,8 +806,8 @@ img {
 
 /* REGIONAL IMPACT - PILLAR 4 */
 .regional-impact {
-  background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%);
-  border: 1px solid #f0e6d6;
+  background: linear-gradient(135deg, #fef0d8 0%, #fff9f0 100%);
+  border: 1px solid #e8d0b0;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 24px;
@@ -820,7 +820,7 @@ img {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #d97706;
+  color: #b35308;
   margin-bottom: 14px;
 }
 .impact-grid {
