@@ -143,7 +143,12 @@ export default function DetailFlyout() {
     <div id="detail-flyout" className="detail-flyout">
       <div className="flyout-overlay" onClick={() => closeFlyout(true)}></div>
       <div className="flyout-panel dark-editorial">
-        <button className="flyout-close" onClick={() => closeFlyout(true)}>✕</button>
+        <div className="flyout-header">
+          <div className="logo flyout-logo-text">
+            Glide<span className="accent">Intelligence</span>
+          </div>
+          <button className="flyout-close" onClick={() => closeFlyout(true)}>✕</button>
+        </div>
         
         <div id="flyout-content" className="flyout-content-scroll">
           {flyoutType === "search" && <SearchFlyoutContent />}

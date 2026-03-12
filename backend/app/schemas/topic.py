@@ -15,7 +15,7 @@ class TopicAnalysisSchema(BaseModel):
     drivers_of_story: Optional[List[str]] = None
     strategic_implications: Optional[List[str]] = None
     regional_impact: Optional[List[str]] = None
-    confidence_score: float = 0.0
+    confidence_score: Optional[float] = 0.0
     
     sentiment_summary: Optional[str] = None
     framing_overview: Optional[str] = None

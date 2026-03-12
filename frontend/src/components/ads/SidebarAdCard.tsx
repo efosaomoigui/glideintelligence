@@ -62,10 +62,10 @@ export default function SidebarAdCard() {
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-          <span style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#60a5fa" }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#60a5fa" }}>
             {ad.sponsor.tagline || "Sponsored"}
           </span>
-          <span style={{ fontSize: "0.6rem", color: "#555", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <span style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Promoted
           </span>
         </div>
@@ -78,13 +78,13 @@ export default function SidebarAdCard() {
           </div>
         )}
 
-        <div style={{ fontWeight: 600, fontSize: "0.88rem", color: "#fff", lineHeight: 1.4, marginBottom: "6px" }}>
+        <div style={{ fontWeight: 600, fontSize: "1.05rem", color: "#fff", lineHeight: 1.4, marginBottom: "6px" }}>
           {ad.title}
         </div>
-        <div style={{ fontSize: "0.78rem", color: "#aaa", lineHeight: 1.5, marginBottom: "10px" }}>
+        <div style={{ fontSize: "0.95rem", color: "#aaa", lineHeight: 1.5, marginBottom: "10px" }}>
           {(ad.sponsor.summary || "").slice(0, 80)}{(ad.sponsor.summary?.length ?? 0) > 80 ? "…" : ""}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", fontWeight: 600, color: "#60a5fa" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.95rem", fontWeight: 600, color: "#60a5fa" }}>
           {ad.sponsor.cta_text || "Learn More"}
           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 from celery import shared_task
-from app.database import AsyncSessionLocal
+from app.database import AsyncSessionLocal, engine
 from app.utils.jobs import create_job_record, update_job_status
 from app.constants import DEFAULT_CATEGORY
 from sqlalchemy import select
@@ -17,11 +17,20 @@ def run_async(coro):
     """
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        try:
+            # Attempt to close pending tasks to avoid loop leak warnings
+            if hasattr(asyncio, "all_tasks"):
+                pending = asyncio.all_tasks(loop)
+                if pending:
+                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        except:
+            pass
         loop.close()
         asyncio.set_event_loop(None)
 
@@ -44,6 +53,9 @@ async def update_source_health(db, source_id: int, success: bool):
         health.last_success = datetime.now()
         health.fail_count = 0
     else:
+        # Avoid AttributeError if fail_count is None
+        if health.fail_count is None:
+            health.fail_count = 0
         health.fail_count += 1
         health.status = "down" if health.fail_count > 5 else "degraded" if health.fail_count > 2 else "healthy"
     await db.commit()
@@ -72,7 +84,6 @@ def fetch_articles_job(self, job_id: str = None):
                 from app.services.crawler_service import CrawlerService
                 
                 crawler = CrawlerService(db)
-                # Fetch all active sources
                 res = await db.execute(select(Source).where(Source.is_active == True))
                 sources = res.scalars().all()
                 
@@ -106,11 +117,14 @@ def fetch_articles_job(self, job_id: str = None):
                  async with AsyncSessionLocal() as db:
                     await update_job_status(db, jid, "FAILED", error=str(e))
             raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
     
     try:
         count = run_async(_run())
-        # Chain to normalize — fire-and-forget, don't let failures here
-        # mark the fetch job as failed.
         if count and count > 0:
             try:
                 normalize_articles_job.delay(job_id=None)
@@ -119,14 +133,13 @@ def fetch_articles_job(self, job_id: str = None):
         return {"status": "success", "job_id": job_id}
     except Exception as exc:
         raise self.retry(exc=exc)
+
 @shared_task(name="normalize_articles_job", bind=True, max_retries=3)
 def normalize_articles_job(self, job_id: str = None):
     """Job to clean and structure raw articles, extract entities and generate embeddings."""
     from app.services.ai.nlp_service import NLPService
     from app.services.ai.embedding_service import EmbeddingService
     from app.models import ArticleEntity, ArticleEmbedding, RawArticle
-    
-    logger.info("Starting article normalization...")
     
     async def _run():
         jid = job_id
@@ -145,31 +158,22 @@ def normalize_articles_job(self, job_id: str = None):
                 nlp = NLPService()
                 embedder = EmbeddingService()
                 
-                # Fetch pending articles
                 query = select(RawArticle).where(RawArticle.sentiment_score == None).limit(50)
                 result = await db.execute(query)
                 articles = result.scalars().all()
                 
                 for article in articles:
-                    # 1. Extract entities
                     entities = nlp.extract_entities(article.title + " " + (article.description or ""))
                     for ent in entities:
-                        ae = ArticleEntity(
-                            article_id=article.id,
-                            entity_name=ent["text"],
-                            entity_type=ent["label"]
-                        )
+                        ae = ArticleEntity(article_id=article.id, entity_name=ent["text"], entity_type=ent["label"])
                         db.add(ae)
                     
-                    # 2. Generate embedding
                     vec = embedder.generate_embedding(article.title)
                     emb = ArticleEmbedding(article_id=article.id, embedding=vec)
                     db.add(emb)
                     
-                    # 3. Mark as processed (using sentiment_score as a proxy for now)
                     article.sentiment_score = 0.0 
 
-                    # 4. Keyword-based categorisation — values must match app/constants.py VALID_CATEGORIES
                     if not article.category:
                         text_content = (article.title + " " + (article.content or "")).lower()
                         if any(x in text_content for x in ["senate", "president", "election", "law", "policy", "government", "minister", "tinubu", "governor", "apc", "pdp", "lp", "national assembly"]):
@@ -193,7 +197,7 @@ def normalize_articles_job(self, job_id: str = None):
                         elif any(x in text_content for x in ["global impact", "international", "united nations", "un", "world bank", "imf", "treaty", "foreign aid"]):
                             article.category = "global-impact"
                         else:
-                            article.category = DEFAULT_CATEGORY  # "general"
+                            article.category = DEFAULT_CATEGORY
                     
                 await db.commit()
                 await update_job_status(db, jid, "COMPLETED", result={"normalized_count": len(articles)})
@@ -204,6 +208,11 @@ def normalize_articles_job(self, job_id: str = None):
                  async with AsyncSessionLocal() as db:
                     await update_job_status(db, jid, "FAILED", error=str(e))
             raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
 
     try:
         count = run_async(_run())
@@ -222,21 +231,16 @@ def clustering_job(self, job_id: str = None):
     from app.services.ai.clustering_service import ClusteringService
     from app.models import ArticleEmbedding, RawArticle, TopicArticle
     
-    logger.info("Starting article clustering...")
-    
     async def _run():
         jid = job_id
         try:
             async with AsyncSessionLocal() as db:
-                # Create Job Record if not exists
                 if not jid:
                      jid = await create_job_record(db, "CLUSTERING")
                 
                 await update_job_status(db, jid, "RUNNING")
-
                 cluster_svc = ClusteringService(db)
                 
-                # Find articles with embeddings but no topic
                 query = (
                     select(ArticleEmbedding, RawArticle.title)
                     .join(RawArticle, RawArticle.id == ArticleEmbedding.article_id)
@@ -251,7 +255,6 @@ def clustering_job(self, job_id: str = None):
                     topic_id = await cluster_svc.find_or_create_topic(emb_record.embedding, title)
                     await cluster_svc.assign_article_to_topic(emb_record.article_id, topic_id)
                     
-                    # Propagate article category to topic if topic has none
                     article_res = await db.execute(select(RawArticle).where(RawArticle.id == emb_record.article_id))
                     article = article_res.scalar_one_or_none()
                     if article and article.category:
@@ -269,10 +272,14 @@ def clustering_job(self, job_id: str = None):
                  async with AsyncSessionLocal() as db:
                     await update_job_status(db, jid, "FAILED", error=str(e))
             raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
 
     try:
         count = run_async(_run())
-        # Always attempt AI analysis — there may be topics without analysis.
         try:
             ai_analysis_job.delay(job_id=None)
         except Exception as chain_err:
@@ -284,8 +291,6 @@ def clustering_job(self, job_id: str = None):
 @shared_task(name="ai_analysis_job", bind=True, max_retries=3)
 def ai_analysis_job(self, job_id: str = None, topic_id: Optional[int] = None):
     """Job to generate comprehensive AI analysis for a topic using category-specific configurations."""
-    logger.info(f"Checking AI analysis task (job_id={job_id}, topic_id={topic_id})")
-    
     async def _run():
         jid = job_id
         try:
@@ -293,18 +298,15 @@ def ai_analysis_job(self, job_id: str = None, topic_id: Optional[int] = None):
             from app.models import Topic, TopicAnalysis
             
             async with AsyncSessionLocal() as db:
-                # Create Job Record
                 if not jid:
                      jid = await create_job_record(db, "AI_ANALYSIS", payload={"topic_id": topic_id})
 
                 await update_job_status(db, jid, "RUNNING")
-
                 job = GenerateTopicAnalysisJob(db)
 
                 if topic_id is not None:
                     await job.execute(topic_id)
                 else:
-                    # Process all topics that don't have analysis yet
                     query = select(Topic.id).outerjoin(TopicAnalysis).where(TopicAnalysis.id == None)
                     result = await db.execute(query)
                     topic_ids = result.scalars().all()
@@ -319,13 +321,17 @@ def ai_analysis_job(self, job_id: str = None, topic_id: Optional[int] = None):
                  async with AsyncSessionLocal() as db:
                     await update_job_status(db, jid, "FAILED", error=str(e))
             raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
 
     try:
         result = run_async(_run())
         return {"status": "completed", "result": result}
     except Exception as exc:
         raise self.retry(exc=exc)
-
 
 @shared_task(name="trend_update_job", bind=True, max_retries=3)
 def trend_update_job(self, job_id: str = None):
@@ -334,7 +340,6 @@ def trend_update_job(self, job_id: str = None):
     from datetime import datetime, timedelta
     from sqlalchemy import func
 
-    logger.info("Updating trends...")
     async def _run():
         jid = job_id
         try:
@@ -343,13 +348,8 @@ def trend_update_job(self, job_id: str = None):
                     jid = await create_job_record(db, "TREND_UPDATE")
                 
                 await update_job_status(db, jid, "RUNNING")
-                
-                # Logic: Calculate interest score for each topic
-                # Score = (New Articles in last 24h * 1.0) + (Unique Sources * 2.0)
-                
                 since = datetime.now() - timedelta(hours=24)
                 
-                # Get activity per topic
                 query = (
                     select(
                         Topic.id, 
@@ -358,7 +358,7 @@ def trend_update_job(self, job_id: str = None):
                     )
                     .join(TopicArticle, Topic.id == TopicArticle.topic_id)
                     .join(RawArticle, TopicArticle.article_id == RawArticle.id)
-                    .where(RawArticle.published_at >= str(since)) # diverse casting might be needed depending on DB
+                    .where(RawArticle.published_at >= str(since))
                     .group_by(Topic.id)
                 )
                 
@@ -368,31 +368,18 @@ def trend_update_job(self, job_id: str = None):
                 updated_count = 0
                 for t_id, a_count, s_count in topic_stats:
                     score = (a_count * 1.0) + (s_count * 2.0)
-                    
-                    # Record trend data point
-                    trend = TopicTrend(
-                        topic_id=t_id,
-                        interest_score=score,
-                        date=datetime.now()
-                    )
+                    trend = TopicTrend(topic_id=t_id, interest_score=score, date=datetime.now())
                     db.add(trend)
                     
-                    # Update Topic status
-                    # Threshold for trending: e.g., score > 10 (needs tuning)
                     is_trending = score > 10
-                    
-                    # Update topic directly
-                    # We need to fetch the topic object to update it to avoid attach errors or use update statement
                     t_query = select(Topic).where(Topic.id == t_id)
                     t_res = await db.execute(t_query)
                     topic = t_res.scalar_one()
                     topic.is_trending = is_trending
-                    topic.confidence_score = min(1.0, score / 20.0) # Normalize loose
-                    
+                    topic.confidence_score = min(1.0, score / 20.0)
                     updated_count += 1
                 
                 await db.commit()
-                
                 await update_job_status(db, jid, "COMPLETED", result={"topics_updated": updated_count})
                 return f"Trends updated for {updated_count} topics"
         except Exception as e:
@@ -401,6 +388,11 @@ def trend_update_job(self, job_id: str = None):
                  async with AsyncSessionLocal() as db:
                      await update_job_status(db, jid, "FAILED", error=str(e))
             raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
 
     try:
         res = run_async(_run())
@@ -415,30 +407,23 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
     from app.config import settings
     import httpx
     
-    logger.info(f"Fetching videos for topic {topic_id}...")
-    
     async def _fetch_for_topic(db, t_id: int):
-        # Get Topic
         res = await db.execute(select(Topic).where(Topic.id == t_id))
         topic = res.scalar_one_or_none()
         if not topic:
-            logger.warning(f"Topic {t_id} not found for video fetch")
             return 0
             
         api_key = settings.YOUTUBE_API_KEY
         if not api_key:
-            logger.warning("YOUTUBE_API_KEY not set. Skipping video fetch.")
             return 0
             
-        # Search YouTube
-        # Ref: https://developers.google.com/youtube/v3/docs/search/list
         search_url = "https://www.googleapis.com/youtube/v3/search"
         params = {
             "part": "snippet",
             "q": f"{topic.title} news",
             "type": "video",
             "maxResults": 3,
-            "order": "date", # Get recent
+            "order": "date",
             "key": api_key,
             "relevanceLanguage": "en"
         }
@@ -447,7 +432,6 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
             resp = await client.get(search_url, params=params)
             
         if resp.status_code != 200:
-            logger.error(f"YouTube API Error: {resp.text}")
             return 0
             
         data = resp.json()
@@ -457,8 +441,6 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
         for item in items:
             vid_id = item["id"]["videoId"]
             snippet = item["snippet"]
-            
-            # Check duplicate
             v_url = f"https://www.youtube.com/watch?v={vid_id}"
             exists = await db.execute(select(TopicVideo).where(TopicVideo.topic_id == t_id, TopicVideo.video_url == v_url))
             if exists.scalar_one_or_none():
@@ -469,8 +451,7 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
                 video_url=v_url,
                 title=snippet["title"],
                 thumbnail_url=snippet["thumbnails"]["high"]["url"],
-                source_platform="youtube",
-                duration=None # Requires separate details call, skipping for efficiency
+                source_platform="youtube"
             )
             db.add(video)
             count += 1
@@ -491,7 +472,6 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
                 if topic_id:
                     total_videos = await _fetch_for_topic(db, topic_id)
                 else:
-                    # Fetch for trending topics only if no specific topic
                     query = select(Topic).where(Topic.is_trending == True)
                     result = await db.execute(query)
                     topics = result.scalars().all()
@@ -507,6 +487,11 @@ def video_fetch_job(self, job_id: str = None, topic_id: int = None):
                   async with AsyncSessionLocal() as db:
                       await update_job_status(db, jid, "FAILED", error=str(e))
              raise e
+        finally:
+            try:
+                await engine.dispose()
+            except:
+                pass
 
     try:
         res = run_async(_run())

@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Sora, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./mobile.css";
 import DetailFlyout from "@/components/DetailFlyout";
 
 
-const inter = Inter({
+const inter = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
+});
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-sora",
+  display: "swap",
+  weight: ["600", "700"],
 });
 
 const playfair = Playfair_Display({
@@ -41,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable}`}>
+      <body suppressHydrationWarning className={`${inter.variable} ${sora.variable} ${playfair.variable} ${jetbrainsMono.variable}`}>
         <AuthProvider>
           {children}
           <DetailFlyout />

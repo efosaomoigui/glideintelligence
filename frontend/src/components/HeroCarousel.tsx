@@ -87,12 +87,12 @@ function SponsoredSpotlight() {
           <div className="metric-text" style={{ fontWeight: 600, color: "white", marginBottom: "6px" }}>
             {ad.title}
           </div>
-          <div className="metric-text" style={{ fontSize: "0.8rem" }}>
+          <div className="metric-text" style={{ fontSize: "0.95rem" }}>
             {(ad.sponsor?.summary || "").slice(0, 100)}{(ad.sponsor?.summary?.length ?? 0) > 100 ? "…" : ""}
           </div>
           <button
             onClick={() => openSponsorFlyout(ad)}
-            style={{ display: "block", marginTop: "12px", fontSize: "0.8rem", color: "#3498db", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+            style={{ display: "block", marginTop: "12px", fontSize: "0.95rem", color: "#3498db", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" }}
           >
             {ad.sponsor?.cta_text || "Read Report"} →
           </button>
@@ -131,12 +131,12 @@ function SponsoredSpotlight() {
               <div className="metric-text" style={{ fontWeight: 600, color: "white", marginBottom: "6px" }}>
                 {ad.title}
               </div>
-              <div className="metric-text" style={{ fontSize: "0.8rem" }}>
+              <div className="metric-text" style={{ fontSize: "0.95rem" }}>
                 {(ad.sponsor?.summary || "").slice(0, 90)}…
               </div>
               <button
                 onClick={() => openSponsorFlyout(ad)}
-                style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "12px", fontSize: "0.8rem", color: "#3498db", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "12px", fontSize: "0.95rem", color: "#3498db", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" }}
               >
                 {ad.sponsor?.cta_text} →
               </button>

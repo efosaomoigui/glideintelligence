@@ -59,7 +59,7 @@ export default function MobileDrawer({ isOpen, onClose, activeCategory }: Mobile
         {/* Drawer Header */}
         <div className="drawer-header">
           <span className="drawer-logo">
-            Gl<span className="accent">Intel</span>
+            Glide<span className="accent">Intelligence</span>
           </span>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close menu">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

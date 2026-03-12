@@ -22,25 +22,17 @@ class CrawlerService:
         Fetch articles from a given source based on its type.
         Returns the number of articles fetched (simulated or real).
         """
-        try:
-            if source.type == SourceType.RSS:
-                count = await self._fetch_rss(source)
-            elif source.type == SourceType.API:
-                count = await self._fetch_api(source)
-            elif source.type == SourceType.WEBSITE:
-                count = await self._fetch_website(source)
-            else:
-                logger.warning(f"Unknown source type {source.type} for source {source.name}")
-                count = 0
-            
-            await self._update_health(source.id, True)
-            return count
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            logger.error(f"Error fetching from source {source.name} ({source.type}): {e}")
-            await self._update_health(source.id, False)
-            return 0
+        if source.type == SourceType.RSS:
+            count = await self._fetch_rss(source)
+        elif source.type == SourceType.API:
+            count = await self._fetch_api(source)
+        elif source.type == SourceType.WEBSITE:
+            count = await self._fetch_website(source)
+        else:
+            logger.warning(f"Unknown source type {source.type} for source {source.name}")
+            count = 0
+        
+        return count
 
     async def validate_source(self, source_type: str, url: str) -> bool:
         """Validate if the source URL is reachable and matches the type."""
@@ -55,16 +47,13 @@ class CrawlerService:
         
         logger.info(f"Fetching RSS feed from {source.url}")
         
-        # Run feedparser in executor to avoid blocking async loop
-        # def parse_feed(url):
-        #    return feedparser.parse(url)
-            
-        # loop = asyncio.get_event_loop()
-        # feed = await loop.run_in_executor(None, parse_feed, source.url)
-        
-        # DEBUG: Run synchronously to test
+        def parse_feed_sync(url):
+             return feedparser.parse(url)
+             
+        loop = asyncio.get_event_loop()
         logger.info(f"Parsing feed: {source.url}")
-        feed = feedparser.parse(source.url)
+        feed = await loop.run_in_executor(None, parse_feed_sync, source.url)
+        
         logger.info(f"Feed keys: {feed.keys()}")
         logger.info(f"Entries count: {len(feed.entries)}")
         if hasattr(feed, 'bozo') and feed.bozo:
@@ -73,7 +62,7 @@ class CrawlerService:
         if not feed.entries and "/feed" not in source.url and "rss" not in source.url:
              # Try common feed paths if direct URL fails
              for suffix in ["/feed", "/rss", "/rss.xml", "/feed.xml"]:
-                 feed = await loop.run_in_executor(None, parse_feed, source.url.rstrip('/') + suffix)
+                 feed = await loop.run_in_executor(None, parse_feed_sync, source.url.rstrip('/') + suffix)
                  if feed.entries:
                      break
         
@@ -152,22 +141,3 @@ class CrawlerService:
         await asyncio.sleep(2)
         return 3 # Mock count
 
-    async def _update_health(self, source_id: int, success: bool):
-        result = await self.db.execute(select(SourceHealth).where(SourceHealth.source_id == source_id))
-        health = result.scalar_one_or_none()
-        
-        if not health:
-            health = SourceHealth(source_id=source_id)
-            self.db.add(health)
-        
-        if success:
-            health.status = "healthy"
-            health.last_success = datetime.now()
-            health.fail_count = 0
-        else:
-            if health.fail_count is None:
-                health.fail_count = 0
-            health.fail_count += 1
-            health.status = "down" if health.fail_count > 5 else "degraded" if health.fail_count > 2 else "healthy"
-        
-        await self.db.commit()

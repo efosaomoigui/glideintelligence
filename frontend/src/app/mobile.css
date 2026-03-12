@@ -25,9 +25,9 @@
   gap: 12px;
 }
 .mobile-logo {
-  font-family: var(--serif);
+  font-family: var(--font-heading);
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
   text-decoration: none;
@@ -424,11 +424,11 @@
   .ticker-track span { margin-right: 36px; }
 
   /* ── Typography ── */
-  h1, .hero-title { font-size: 1.65rem !important; line-height: 1.2 !important; }
-  h2, .section-title { font-size: 1.25rem !important; }
-  h3, .topic-title { font-size: 1.1rem !important; line-height: 1.35 !important; }
-  .brief-text, .summary-content, .voice-text { font-size: 0.95rem !important; line-height: 1.65 !important; }
-  .topic-status, .update-time, .metric-label { font-size: 0.78rem !important; }
+  h1, .hero-title { font-family: var(--font-heading) !important; font-size: 32px !important; line-height: 1.2 !important; letter-spacing: -0.02em !important; font-weight: 700 !important; }
+  h2, .section-title { font-family: var(--font-heading) !important; font-size: 24px !important; font-weight: 600 !important; }
+  h3, .topic-title { font-family: var(--font-heading) !important; font-size: 20px !important; line-height: 1.35 !important; font-weight: 600 !important; }
+  .brief-text, .summary-content, .voice-text { font-family: var(--font-body) !important; font-size: 16px !important; line-height: 1.6 !important; }
+  .topic-status, .update-time, .metric-label { font-family: var(--font-body) !important; font-size: 12px !important; font-weight: 500 !important; }
 
   /* ── Hero ── */
   .hero-intelligence { padding: 24px 0 28px; }

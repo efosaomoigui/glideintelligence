@@ -31,7 +31,7 @@ export default function MobileHeader({ activeCategory }: MobileHeaderProps) {
 
           {/* Center: Logo */}
           <Link href="/" className="mobile-logo" style={{ textDecoration: "none", color: "inherit" }}>
-            Gl<span className="accent">Intel</span>
+            Glide<span className="accent">Intelligence</span>
           </Link>
 
           {/* Right: Actions */}
