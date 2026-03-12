@@ -118,7 +118,7 @@ export default function QuickPoll({ poll: initialPoll, userVotedOptionId, onVote
   return (
     <div>
       <div className="sidebar-title-flyout" style={{ marginBottom: "12px" }}>Quick Poll</div>
-      <div className="poll-question-flyout" style={{lineHeight: 1.4, fontSize: "1.08rem", fontWeight: 600, color: "#fff", marginBottom: "20px", fontFamily: "var(--serif)"}}>{poll.question}</div>
+      <div className="poll-question-flyout" style={{lineHeight: 1.4, fontSize: "1.08rem", fontWeight: 600, color: "#fff", marginBottom: "20px", fontFamily: "var(--font-heading)"}}>{poll.question}</div>
       <div className="poll-options" style={{display: "flex", flexDirection: "column", gap: "10px"}}>
         {poll.options.map((option: any) => {
           const votesForOpt = option.vote_count || 0;
