@@ -345,10 +345,17 @@ img {
   transition: all 0.15s;
   letter-spacing: 0.01em;
 }
-.nav-link:hover,
+.nav-link:hover {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 4px 4px 0 0;
+}
 .nav-link.active {
   color: var(--ink);
   border-bottom-color: var(--accent);
+  background: rgba(0, 0, 0, 0.13);
+  border-radius: 4px 4px 0 0;
 }
 
 /* ─── HERO INTELLIGENCE ──────────────────────────────── */
@@ -697,8 +704,11 @@ img {
   align-items: center;
   gap: 12px;
   font-size: 0.75rem;
-  color: var(--ink-muted);
+  color: var(--ink-mid);
   font-family: var(--mono);
+  background: var(--bg);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 .update-time {
   display: flex;
@@ -751,10 +761,10 @@ img {
 }
 .perspective-label {
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ink-mid);
+  color: var(--ink);
   margin-bottom: 14px;
   display: flex;
   align-items: center;
