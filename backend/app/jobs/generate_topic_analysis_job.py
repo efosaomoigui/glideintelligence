@@ -47,15 +47,32 @@ class GenerateTopicAnalysisJob:
         self.content_gen._current_topic_id = topic_id
         
         try:
-            # Step 1: Fetch topic
-            t_query = select(Topic).where(Topic.id == topic_id)
+            # Step 1: Fetch topic with lock to prevent race conditions with independent agents
+            t_query = (
+                select(Topic)
+                .where(Topic.id == topic_id)
+                .with_for_update(skip_locked=True)
+            )
             t_res = await self.db.execute(t_query)
             topic = t_res.scalar_one_or_none()
             
             if not topic:
-                logger.warning(f"Topic {topic_id} not found")
+                logger.warning(f"Topic {topic_id} not found or already locked by another worker")
                 return
             
+            # Skip if already being processed or finished (safety check)
+            if topic.analysis_status in ['processing', 'complete']:
+                logger.info(f"Topic {topic_id} is already {topic.analysis_status}, skipping.")
+                return
+
+            # Mark as processing immediately
+            topic.analysis_status = 'processing'
+            await self.db.commit() # Commit status change so others see it's taken
+            
+            # Re-fetch topic for the rest of the job (new transaction)
+            t_res = await self.db.execute(select(Topic).where(Topic.id == topic_id))
+            topic = t_res.scalar_one_or_none()
+
             # Fix encoding in topic data
             topic.title = safe_encode(topic.title)
             if topic.description:
@@ -161,6 +178,7 @@ class GenerateTopicAnalysisJob:
             topic.overall_sentiment = overall_sentiment
             topic.sentiment_score = sentiment_score
             topic.status = "stable"
+            topic.analysis_status = "complete" # CRITICAL: Prevents re-processing
             topic.last_verified_at = datetime.now()
             
             # Sync summary to topic description for frontend fallback

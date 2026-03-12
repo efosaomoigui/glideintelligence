@@ -307,10 +307,18 @@ def ai_analysis_job(self, job_id: str = None, topic_id: Optional[int] = None):
                 if topic_id is not None:
                     await job.execute(topic_id)
                 else:
-                    query = select(Topic.id).outerjoin(TopicAnalysis).where(TopicAnalysis.id == None)
+                    # Fetch topics that need analysis AND aren't already being handled
+                    query = (
+                        select(Topic.id)
+                        .where(Topic.analysis_status.in_(['pending', 'pipeline_failed']))
+                        .order_by(Topic.updated_at.desc())
+                        .limit(20)
+                    )
                     result = await db.execute(query)
                     topic_ids = result.scalars().all()
+                    
                     for t_id in topic_ids:
+                        # job.execute now has internal lock/skip logic
                         await job.execute(t_id)
                 
                 await update_job_status(db, jid, "COMPLETED")
