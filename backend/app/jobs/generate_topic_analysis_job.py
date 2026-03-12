@@ -280,6 +280,12 @@ class GenerateTopicAnalysisJob:
         await self._store_regional_impacts(topic_id, analysis_result['regional_impacts'])
         await self.db.commit()
         logger.info(f"✅ Regional impacts saved ({len(analysis_result['regional_impacts'])} items)")
+
+        # Component 3.5: Regional categories
+        if 'regional_categories' in analysis_result:
+            await self._store_regional_categories(topic_id, analysis_result['regional_categories'])
+            await self.db.commit()
+            logger.info(f"✅ Regional categories saved ({len(analysis_result['regional_categories'])} items)")
         
         # Component 4: Intelligence card
         await self._store_intelligence_card(topic_id, topic.category, analysis_result['intelligence_card'])
@@ -386,6 +392,19 @@ class GenerateTopicAnalysisJob:
                 is_current=True
             )
             self.db.add(regional_impact)
+
+    async def _store_regional_categories(self, topic_id: int, items: List[Dict]):
+        """Store regional categories with encoding fixes."""
+        from app.models.region import TopicRegionalCategory
+        await self.db.execute(delete(TopicRegionalCategory).where(TopicRegionalCategory.topic_id == topic_id))
+        
+        for item in items:
+            reg_cat = TopicRegionalCategory(
+                topic_id=topic_id,
+                region_name=safe_encode(item.get("region", "Global")),
+                impact=safe_encode(item.get("impact", "Neutral"))
+            )
+            self.db.add(reg_cat)
     
     async def _store_intelligence_card(self, topic_id: int, category: str, card_data: Dict):
         """Store intelligence card with encoding fixes."""

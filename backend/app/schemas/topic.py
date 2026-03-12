@@ -69,6 +69,11 @@ class RegionalImpactSchema(BaseModel):
     context: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+class RegionalCategorySchema(BaseModel):
+    region_name: str
+    impact: str = "Neutral"
+    model_config = ConfigDict(from_attributes=True)
+
 class IntelligenceCardSchema(BaseModel):
     category: str
     icon: str
@@ -105,8 +110,8 @@ class TopicTrendingSchema(TopicSchema):
     engagement: dict = {}
     sentiment_breakdown: List[SentimentDimensionSchema] = []
     # These are populated from private attrs set in _enrich_topic_for_frontend
-    source_perspectives: List[SourcePerspectiveSchema] = []
     regional_impacts: List[RegionalImpactSchema] = []
+    regional_categories: List[RegionalCategorySchema] = []
     
     # Intelligence Indicators
     intelligence_level: str = "Standard"
@@ -155,7 +160,7 @@ class TopicTrendingSchema(TopicSchema):
                 data[attr] = val
 
         # Relationship-based fields: ONLY read if in obj_dict (meaning they were loaded or explicitly set)
-        for rel in ('analysis', 'articles', 'intelligence_card', 'trends', 'videos', 'sentiment_breakdown'):
+        for rel in ('analysis', 'articles', 'intelligence_card', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories'):
             if rel in obj_dict:
                 val = getattr(values, rel, None)
                 if val is not None:
@@ -163,7 +168,7 @@ class TopicTrendingSchema(TopicSchema):
                     data[rel] = list(val) if isinstance(val, (list, tuple)) or hasattr(val, '__iter__') and not isinstance(val, (dict, str)) else val
             else:
                 # Default to empty/None for missing relationships to avoid 500s on transition objects
-                if rel in ('articles', 'trends', 'videos', 'sentiment_breakdown'):
+                if rel in ('articles', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories'):
                     data[rel] = []
                 else:
                     data[rel] = None
@@ -194,6 +199,7 @@ class TopicDetailSchema(TopicTrendingSchema):
     sentiment_breakdown: List[SentimentDimensionSchema] = [] 
     source_perspectives: List[SourcePerspectiveSchema] = []
     regional_impacts: List[RegionalImpactSchema] = []
+    regional_categories: List[RegionalCategorySchema] = []
     intelligence_card: Optional[IntelligenceCardSchema] = None
     
     trends: List[TopicTrendSchema] = []

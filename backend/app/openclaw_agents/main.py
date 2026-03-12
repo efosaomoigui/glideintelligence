@@ -21,6 +21,7 @@ from app.models.topic import Topic, TopicArticle, TopicAnalysis, TopicSentimentB
 from app.models.article import RawArticle
 from app.models.intelligence import SourcePerspective, IntelligenceCard
 from app.models.impact import RegionalImpact, ImpactCategory
+from app.models.region import TopicRegionalCategory
 from app.models.interaction import Poll, PollOption
 from app.constants import VALID_CATEGORIES
 import json
@@ -107,6 +108,7 @@ Additional requirements for your JSON response:
 - "sentiment_breakdown": [{"dimension_type": "...", "dimension_value": "...", "sentiment": "pos/neg/neu", "sentiment_score": 0.5, "percentage": 100, "icon": "emoji", "description": "..."}]
 - "source_perspectives": [{"source_name": "...", "source_type": "...", "frame_label": "...", "sentiment": "...", "sentiment_percentage": "...", "key_narrative": "..."}]
 - "regional_impacts": [{"impact_category": "...", "icon": "...", "title": "...", "value": "...", "severity": "low/mid/high", "context": "..."}]
+- "regional_categories": [{"region": "...", "impact": "Positive/Negative/Neutral"}]
 - "intelligence_card": {"category": "...", "icon": "...", "title": "...", "description": "...", "trend_percentage": "...", "is_positive": true}
 """
 
@@ -127,11 +129,12 @@ Respond ONLY with a valid JSON object matching this exact structure:
   "drivers_of_story": ["driver 1", "driver 2"],
   "strategic_implications": ["implication 1", "implication 2"],
   "regional_impact": ["impact 1", "impact 2"],
+  "regional_categories": [{"region": "Nigeria", "impact": "Neutral"}],
   "sentiment_summary": "A concise summary of the overall sentiment and public/media reaction.",
   "framing_overview": "How different media outlets or stakeholders are framing this story.",
   "suggested_category": "one of: {', '.join(sorted(VALID_CATEGORIES))}",
   "confidence_score": 0.85
-  {', "sentiment_breakdown": [], "source_perspectives": [], "regional_impacts": [], "intelligence_card": {}' if is_recovery else ''}
+  {', "sentiment_breakdown": [], "source_perspectives": [], "regional_impacts": [], "regional_categories": [], "intelligence_card": {}' if is_recovery else ''}
 }}"""
 
         try:
@@ -235,6 +238,16 @@ Respond ONLY with a valid JSON object matching this exact structure:
                         is_current=True
                     )
                     session.add(regional_impact)
+            
+            # Regional Categories (Recovery OR Normal enrichment)
+            if report_data.get('regional_categories'):
+                await session.execute(delete(TopicRegionalCategory).where(TopicRegionalCategory.topic_id == topic.id))
+                for reg_data in report_data['regional_categories']:
+                    session.add(TopicRegionalCategory(
+                        topic_id=topic.id,
+                        region_name=safe_encode(reg_data.get("region", "Global")),
+                        impact=safe_encode(reg_data.get("impact", "Neutral"))
+                    ))
             
             # Intelligence Card
             if report_data.get('intelligence_card'):

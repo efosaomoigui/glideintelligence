@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.region import TopicRegionalCategory
 from app.models.source import Source, SourceHealth, SourceType
 from app.models.article import RawArticle, ArticleEntity, ArticleEmbedding, YouTubeVideo, CollectionJob
 from app.models.topic import Topic, TopicArticle, TopicAnalysis, TopicSentimentBreakdown, TopicTrend, TopicVideo, AISummary, SummaryUpdate

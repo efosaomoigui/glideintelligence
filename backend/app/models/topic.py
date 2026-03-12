@@ -46,6 +46,7 @@ class Topic(Base, TimestampMixin):
     ai_summaries: Mapped[List["AISummary"]] = relationship("AISummary", back_populates="topic", cascade="all, delete-orphan")
     perspectives: Mapped[List["TopicPerspective"]] = relationship("TopicPerspective", back_populates="topic", cascade="all, delete-orphan")
     regional_impacts: Mapped[List["RegionalImpact"]] = relationship("RegionalImpact", back_populates="topic", cascade="all, delete-orphan")
+    regional_categories: Mapped[List["TopicRegionalCategory"]] = relationship("TopicRegionalCategory", back_populates="topic", cascade="all, delete-orphan")
     sentiment_breakdown: Mapped[List["TopicSentimentBreakdown"]] = relationship("TopicSentimentBreakdown", back_populates="topic", cascade="all, delete-orphan")
     source_perspectives: Mapped[List["SourcePerspective"]] = relationship("SourcePerspective", back_populates="topic", cascade="all, delete-orphan")
     intelligence_card: Mapped[Optional["IntelligenceCard"]] = relationship("IntelligenceCard", back_populates="topic", uselist=False, cascade="all, delete-orphan")

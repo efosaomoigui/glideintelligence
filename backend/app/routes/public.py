@@ -185,6 +185,7 @@ def random_responses(topics) -> int:
 async def get_trending_topics(
     filter: str = Query("all", pattern="^(all|today|week|month|developing)$"),
     category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
     params: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
@@ -193,7 +194,8 @@ async def get_trending_topics(
         page=params.page, 
         limit=params.limit, 
         filter_type=filter, 
-        category=category
+        category=category,
+        region=region
     )
     
     return PaginatedResponse(

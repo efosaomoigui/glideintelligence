@@ -7,7 +7,7 @@ import math
 
 from app.models import (
     Topic, RawArticle, TopicArticle, TopicAnalysis, 
-    TopicSentimentBreakdown, TopicTrend, TopicVideo, Source
+    TopicSentimentBreakdown, TopicTrend, TopicVideo, Source, TopicRegionalCategory
 )
 
 class NewsService:
@@ -521,7 +521,7 @@ class NewsService:
         
         return topic
 
-    async def get_trending_topics(self, page: int = 1, limit: int = 20, filter_type: str = "all", category: Optional[str] = None) -> Tuple[List[Topic], int]:
+    async def get_trending_topics(self, page: int = 1, limit: int = 20, filter_type: str = "all", category: Optional[str] = None, region: Optional[str] = None) -> Tuple[List[Topic], int]:
         """Fetch trending topics with pagination and filtering."""
         from datetime import datetime, timedelta
         
@@ -529,8 +529,8 @@ class NewsService:
 
         offset = (page - 1) * limit
         query = select(Topic).options(
-             selectinload(Topic.analysis),
-             selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
+             selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source),
+             selectinload(Topic.regional_categories)
         )
         
         # CRITICAL: Return topics regardless of status so cards show up
@@ -540,6 +540,10 @@ class NewsService:
         # Apply category filter
         if category and category.lower() != "all":
             query = query.where(func.lower(Topic.category) == category.lower())
+        
+        # Apply region filter
+        if region and region.lower() != "all":
+            query = query.join(TopicRegionalCategory).where(func.lower(TopicRegionalCategory.region_name) == region.lower())
         
         # Apply time/status filters
         
@@ -559,6 +563,9 @@ class NewsService:
         count_q = select(func.count(Topic.id)).where(Topic.status.notin_(['archived', 'error']))
         if category and category.lower() != "all":
             count_q = count_q.where(func.lower(Topic.category) == category.lower())
+        
+        if region and region.lower() != "all":
+            count_q = count_q.join(TopicRegionalCategory).where(func.lower(TopicRegionalCategory.region_name) == region.lower())
         
         if filter_type == "today":
             count_q = count_q.where(Topic.updated_at >= now - timedelta(days=1))

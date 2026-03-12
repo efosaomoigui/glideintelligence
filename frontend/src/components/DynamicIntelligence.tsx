@@ -27,16 +27,17 @@ function getSafeRelativeTime(dateStr: string, fallbackStr: string): string {
 
 export default function DynamicIntelligence({ children }: { children?: React.ReactNode }) {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
   const [topics, setTopics] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
-  const fetchTopics = async (period: string, pageNum: number, append = false) => {
+  const fetchTopics = async (period: string, region: string, pageNum: number, append = false) => {
     setLoading(true);
     try {
-      // Correct endpoint: /api/topics/trending?filter=<period>&page=<n>
-      const res = await fetch(`/api/topics/trending?filter=${period}&page=${pageNum}`);
+      // Correct endpoint: /api/topics/trending?filter=<period>&region=<region>&page=<n>
+      const res = await fetch(`/api/topics/trending?filter=${period}&region=${region}&page=${pageNum}`);
 
       if (!res.ok) {
         throw new Error(`API returned status: ${res.status}`);
@@ -127,18 +128,18 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
     }
   };
 
-  // Initial load and when period changes
+  // Initial load and when period/region changes
   useEffect(() => {
     setPage(1);
-    fetchTopics(selectedPeriod, 1, false);
+    fetchTopics(selectedPeriod, selectedRegion, 1, false);
     fetchAds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedRegion]);
 
   // Load more when page increments
   useEffect(() => {
     if (page > 1) {
-      fetchTopics(selectedPeriod, page, true);
+      fetchTopics(selectedPeriod, selectedRegion, page, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
@@ -213,32 +214,54 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
         <div className="topics-section">
           <div className="section-header">
             <h2 className="section-title">Today&apos;s Glide</h2>
-            {/* Desktop filter (hidden on mobile) */}
-            <div className="time-filter">
-              <button 
-                className={selectedPeriod === "today" ? "active" : ""} 
-                onClick={() => handlePeriodClick("today")}
+            
+            <div className="filter-controls">
+              {/* Region Filter */}
+              <select 
+                className="region-select"
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                aria-label="Filter by region"
               >
-                Today
-              </button>
-              <button 
-                className={selectedPeriod === "week" ? "active" : ""} 
-                onClick={() => handlePeriodClick("week")}
-              >
-                This Week
-              </button>
-              <button 
-                className={selectedPeriod === "month" ? "active" : ""} 
-                onClick={() => handlePeriodClick("month")}
-              >
-                This Month
-              </button>
-              <button 
-                className={selectedPeriod === "developing" ? "active" : ""} 
-                onClick={() => handlePeriodClick("developing")}
-              >
-                Developing
-              </button>
+                <option value="all">All Regions</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="West Africa">West Africa</option>
+                <option value="Africa">Africa</option>
+                <option value="USA">United States</option>
+                <option value="UK">United Kingdom</option>
+                <option value="China">China</option>
+                <option value="Europe">Europe</option>
+                <option value="Asia">Asia</option>
+                <option value="Middle East">Middle East</option>
+              </select>
+
+              {/* Desktop filter (hidden on mobile) */}
+              <div className="time-filter desktop-only">
+                <button 
+                  className={selectedPeriod === "today" ? "active" : ""} 
+                  onClick={() => handlePeriodClick("today")}
+                >
+                  Today
+                </button>
+                <button 
+                  className={selectedPeriod === "week" ? "active" : ""} 
+                  onClick={() => handlePeriodClick("week")}
+                >
+                  This Week
+                </button>
+                <button 
+                  className={selectedPeriod === "month" ? "active" : ""} 
+                  onClick={() => handlePeriodClick("month")}
+                >
+                  This Month
+                </button>
+                <button 
+                  className={selectedPeriod === "developing" ? "active" : ""} 
+                  onClick={() => handlePeriodClick("developing")}
+                >
+                  Developing
+                </button>
+              </div>
             </div>
           </div>
 

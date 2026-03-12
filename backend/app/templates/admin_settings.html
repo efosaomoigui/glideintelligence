@@ -74,6 +74,25 @@
                 {% endfor %}
             </div>
         </div>
+
+        <!-- Maintenance Operations -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>Maintenance & Reset</h2>
+            <div style="padding: 16px; background: rgba(220, 53, 69, 0.1); border-radius: 12px; border: 1px solid rgba(220, 53, 69, 0.2);">
+                <div class="flex-between">
+                    <div style="max-width: 70%;">
+                        <h3 style="color: #ff4d4d; margin-top: 0; font-size: 1.1rem;">Reset AI Pipeline</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0;">
+                            This will permanently delete all topics, articles, and AI logs. 
+                            <strong>Configuration data (sources, users, ads) will be preserved.</strong>
+                        </p>
+                    </div>
+                    <button id="cleanPipelineBtn" class="btn btn-danger" onclick="confirmPipelineCleanup()" style="min-width: 200px;">
+                        Clean Pipeline Data
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Add Provider Modal -->
@@ -145,6 +164,37 @@
             document.getElementById('editProviderModal').style.display = 'flex';
         }
         
+        async function confirmPipelineCleanup() {
+            if (!confirm("⚠️ DANGER: This will delete ALL topics, articles, and AI records. Configuration data will remain.\n\nAre you absolutely sure?")) {
+                return;
+            }
+
+            const btn = document.getElementById('cleanPipelineBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Cleaning Database...";
+
+            try {
+                const response = await fetch('/api/admin/settings/maintenance/clean-pipeline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert("✅ " + result.message);
+                } else {
+                    alert("❌ Error: " + (result.detail || "Unknown error occurred"));
+                }
+            } catch (err) {
+                alert("❌ Critical Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
         window.onclick = function(event) {
             if (event.target == document.getElementById('addProviderModal')) {
                 document.getElementById('addProviderModal').style.display = "none";

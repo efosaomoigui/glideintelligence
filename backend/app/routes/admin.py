@@ -14,6 +14,31 @@ from app.workers.celery_app import celery_app
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(get_current_active_superuser)])
 
+@router.post("/settings/maintenance/clean-pipeline")
+async def clean_pipeline_maintenance(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Trigger a full database cleanup of pipeline data."""
+    from app.services.maintenance_service import clean_pipeline_data
+    from app.services.audit_service import log_action
+    
+    result = await clean_pipeline_data(db)
+    
+    if result["status"] == "success":
+        await log_action(
+            db,
+            user_id=current_user.id,
+            action="CLEAN_PIPELINE",
+            target="DATABASE",
+            details=f"Total rows deleted: {result['total_deleted']}",
+            ip_address=request.client.host if request.client else None
+        )
+        return {"status": "success", "message": f"Successfully cleaned {result['total_deleted']} rows from the pipeline tables."}
+    else:
+        raise HTTPException(status_code=500, detail=result["message"])
+
 @router.post("/jobs/trigger/{job_name}")
 @router.post("/jobs/trigger/{job_name}")
 async def trigger_job(

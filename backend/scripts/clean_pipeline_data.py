@@ -52,54 +52,10 @@ Usage:
     python scripts/clean_pipeline_data.py --dry-run
 """
 
-import sys
+import asyncio
 import argparse
-from sqlalchemy import text
-from app.database import SessionLocal
-
-# ────────────────────────────────────────────────────────────────────────────
-# ORDER MATTERS: delete child tables before parent tables to avoid FK errors.
-# All children of Topic are also cleaned via CASCADE, but we list them
-# explicitly first for safety when running TRUNCATE rather than DELETE.
-# ────────────────────────────────────────────────────────────────────────────
-
-PIPELINE_TABLES = [
-    # Level 3 (deepest children)
-    "poll_votes",
-    "poll_options",
-    "comment_votes",
-    "community_insights",
-    "perspective_quotes",
-    "impact_details",
-
-    # Level 2 (children of topics / articles)
-    "article_entities",
-    "article_embeddings",
-    "youtube_videos",
-    "sentiment_analysis",
-    "topic_articles",
-    "topic_analysis",
-    "topic_sentiment_breakdown",
-    "ai_summaries",
-    "summary_updates",
-    "topic_trends",
-    "topic_videos",
-    "topic_perspectives",
-    "source_perspectives",
-    "intelligence_cards",
-    "regional_impacts",
-    "impact_metrics",
-    "polls",
-    "comments",
-    "topic_tags",
-
-    # Level 1 (root pipeline tables)
-    "raw_articles",
-    "topics",
-    "collection_jobs",
-    "jobs",
-]
-
+from app.database import AsyncSessionLocal
+from app.services.maintenance_service import clean_pipeline_data
 
 def confirm_deletion() -> bool:
     print("\n⚠️  WARNING: This will permanently delete ALL pipeline data from the database.")
@@ -109,41 +65,34 @@ def confirm_deletion() -> bool:
     return answer == "yes"
 
 
-def clean_pipeline_data(dry_run: bool = False):
-    db = SessionLocal()
-    try:
-        if not dry_run and not confirm_deletion():
-            print("\n❌ Aborted — no data was deleted.")
-            return
+async def run_cleanup(dry_run: bool = False):
+    async with AsyncSessionLocal() as db:
+        try:
+            if not dry_run and not confirm_deletion():
+                print("\n❌ Aborted — no data was deleted.")
+                return
 
-        print()
-        total_deleted = 0
-
-        for table in PIPELINE_TABLES:
-            try:
-                if dry_run:
-                    result = db.execute(text(f"SELECT COUNT(*) FROM {table}"))
+            print("\nCleaning pipeline data...")
+            
+            if dry_run:
+                # Reuse the table list for dry-run
+                from app.services.maintenance_service import PIPELINE_TABLES
+                from sqlalchemy import text
+                for table in PIPELINE_TABLES:
+                    result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
                     count = result.scalar()
                     print(f"  [DRY-RUN] {table}: {count} rows would be deleted")
+                print(f"\n[DRY-RUN COMPLETE] No changes were made.\n")
+            else:
+                result = await clean_pipeline_data(db)
+                if result["status"] == "success":
+                    print(f"\n✅ Done! {result['total_deleted']} total rows deleted across {len(result['details'])} tables.")
+                    print("   The pipeline is ready for a fresh run.\n")
                 else:
-                    result = db.execute(text(f"DELETE FROM {table}"))
-                    rows = result.rowcount
-                    total_deleted += rows
-                    print(f"  ✓ {table}: {rows} rows deleted")
-            except Exception as e:
-                print(f"  ✗ {table}: ERROR — {e}")
-                db.rollback()
-                raise
+                    print(f"\n❌ Error: {result['message']}\n")
 
-        if not dry_run:
-            db.commit()
-            print(f"\n✅ Done! {total_deleted} total rows deleted across {len(PIPELINE_TABLES)} tables.")
-            print("   The pipeline is ready for a fresh run.\n")
-        else:
-            print(f"\n[DRY-RUN COMPLETE] No changes were made.\n")
-
-    finally:
-        db.close()
+        finally:
+            await db.close()
 
 
 if __name__ == "__main__":
@@ -154,4 +103,4 @@ if __name__ == "__main__":
         help="Show what would be deleted without actually deleting anything.",
     )
     args = parser.parse_args()
-    clean_pipeline_data(dry_run=args.dry_run)
+    asyncio.run(run_cleanup(dry_run=args.dry_run))

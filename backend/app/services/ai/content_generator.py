@@ -296,7 +296,7 @@ class AIContentGenerator:
                 result1 = json.loads(extracted1)
                 
                 # Basic validation for Stage 1
-                required_keys1 = ['sentiment_breakdown', 'source_perspectives', 'regional_impacts', 'verified_category', 'key_takeaways', 'core_drivers']
+                required_keys1 = ['sentiment_breakdown', 'source_perspectives', 'regional_impacts', 'regional_categories', 'verified_category', 'key_takeaways', 'core_drivers']
                 if all(k in result1 for k in required_keys1):
                     provider1 = provider
                     break
@@ -492,11 +492,16 @@ For each impact provide:
 - icon
 - title
 - value (must include specific numbers, amounts, or timeframes)
-- severity ("low","medium","high","critical")
 - context (max 150 characters)
 Use only ASCII characters.
 
-4. CATEGORY VERIFICATION
+4. REGIONAL CATEGORIZATION
+Tag the topic with 3–5 most relevant regions from the provided hierarchy (Global, Africa, West Africa, etc.).
+For each region provide:
+- region (canonical name)
+- impact ("Positive", "Negative", "Neutral")
+
+5. CATEGORY VERIFICATION
 Verify whether the assigned category is correct.
 Return the most accurate category strictly from:
 "politics", "business", "economy", "technology", "sports", "security", "social", "regional", "environment", "general"
@@ -520,6 +525,7 @@ OUTPUT FORMAT
  "sentiment_breakdown": [],
  "source_perspectives": [],
  "regional_impacts": [],
+ "regional_categories": [],
  "verified_category": "",
  "key_takeaways": "",
  "core_drivers": []

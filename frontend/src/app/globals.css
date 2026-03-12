@@ -1548,9 +1548,62 @@ img {
   .filters-section {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ─── REGIONAL FILTER ───────────────────────────────── */
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.region-select {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 8px 32px 8px 14px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-mid);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a4540' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  outline: none;
+  transition: all 0.2s;
+  height: 38px;
+  min-width: 140px;
+}
+
+.region-select:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.region-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 16px;
   }
-  .sidebar {
-    grid-template-columns: 1fr;
+  
+  .filter-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .region-select {
+    flex: 1;
+    max-width: 100%;
+    height: 42px;
+    font-size: 0.88rem;
   }
 }
