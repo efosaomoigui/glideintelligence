@@ -1044,6 +1044,61 @@ function FlyoutInnerContent({
               )}
             </div>
           </section>
+          
+          {/* PILLAR 3: PERSPECTIVE MAP - Moved here for Mobile Simplification */}
+          {(topicData.source_perspectives && topicData.source_perspectives.length > 0) && (
+            <section className="perspective-deep-flyout">
+              <div className="section-label-flyout" style={{ color: "var(--accent)" }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                How Different Sources Frame This
+              </div>
+              <h2 className="section-title-flyout">Source Framing Analysis</h2>
+              <div className="perspective-grid">
+                {topicData.source_perspectives.map((p: any, i: number) => {
+                  const score = parseFloat(String(p.sentiment_percentage).replace("%", "").replace("+", "")) || 0;
+                  return (
+                    <div key={i} className="perspective-item" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "12px" }}>
+                      <div className="perspective-source" style={{ color: "#fff" }}>{p.source_name || p.frame_label}</div>
+                      <div className="perspective-bar">
+                        <div
+                          className={`perspective-fill ${p.sentiment}`}
+                          style={{ width: `${Math.abs(score)}%` }}
+                        ></div>
+                      </div>
+                      <div className="perspective-score" style={{ color: "#888", minWidth: "45px", textAlign: "right" }}>
+                        {score > 0 ? "+" : ""}
+                        {score}%
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* PILLAR 4: REGIONAL IMPACT - Moved here for Mobile Simplification */}
+          {(topicData.regional_impacts && topicData.regional_impacts.length > 0) && (
+            <section className="impact-deep-flyout">
+              <div className="section-label-flyout" style={{ color: "var(--accent-warm)" }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Impact Analysis
+              </div>
+              <h2 className="section-title-flyout">Geographic & Sector Influence</h2>
+              <div className="impact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
+                {topicData.regional_impacts.map((item: any, i: number) => (
+                  <div key={i} className="impact-item" style={{ background: "rgba(255,255,255,0.03)", padding: "16px", borderRadius: "8px" }}>
+                    <div className="impact-icon" style={{ fontSize: "1.5rem", marginBottom: "8px" }}>{item.icon || "📊"}</div>
+                    <div className="impact-title" style={{ fontSize: "0.8rem", color: "#888", marginBottom: "4px" }}>{item.title}</div>
+                    <div className="impact-value" style={{ fontSize: "1rem", color: "#fff", fontWeight: 700 }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* PILLAR 1: SOURCE ARTICLES */}
           <section className="sources-section-flyout">

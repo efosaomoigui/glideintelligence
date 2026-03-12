@@ -32,6 +32,13 @@
   --mono: var(--font-mono);
 }
 
+/* ─── UTILITIES ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
 /* ─── FONT SCALE UTILITIES ─────────────────────────── */
 .text-hero {
   font-family: var(--font-heading);
