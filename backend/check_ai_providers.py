@@ -24,7 +24,8 @@ async def check_providers():
         else:
             print(f"Found {len(providers)} AI Providers:")
             for p in providers:
-                print(f"- {p.name} ({p.model}) [Enabled: {p.enabled}]")
+                has_key = "Yes" if p.api_key else "No"
+                print(f"- {p.name} ({p.model}) [Enabled: {p.enabled}] Priority: {p.priority} | Key: {has_key}")
 
     await engine.dispose()
 

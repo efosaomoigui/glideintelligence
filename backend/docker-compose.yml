@@ -15,12 +15,16 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
+    dns:
+      - 8.8.8.8
     depends_on:
       - db
       - redis
 
   worker:
     build: .
+    dns:
+      - 8.8.8.8
     command: celery -A app.workers.celery_app worker --pool=threads --concurrency=4 -n worker1@%h --loglevel=info
     env_file: .env
     volumes:

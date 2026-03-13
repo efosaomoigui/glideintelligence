@@ -175,6 +175,19 @@ class GenerateTopicAnalysisJob:
                         overall_sentiment = "negative"
 
             # Step 9: Update topic
+            # VALIDATION: Check if we actually got a real report
+            has_narrative = analysis_data.get('summary') and len(analysis_data['summary']) > 50
+            
+            if not has_narrative:
+                logger.warning(f"⚠️  Analysis for topic {topic_id} produced empty or too short narrative. marking as pipeline_failed.")
+                topic.status = "analysis_failed"
+                topic.analysis_status = "pipeline_failed"
+                if not topic.metadata_: topic.metadata_ = {}
+                topic.metadata_['last_error'] = "AI produced empty or truncated narrative"
+                topic.metadata_['error_at'] = str(datetime.now())
+                await self.db.commit()
+                return
+
             topic.overall_sentiment = overall_sentiment
             topic.sentiment_score = sentiment_score
             topic.status = "stable"
