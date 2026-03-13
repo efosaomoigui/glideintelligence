@@ -27,8 +27,6 @@ async def process_category_correction(session: AsyncSession) -> bool:
     Fetches the next 'verified' topic and corrects its category using AI.
     """
     try:
-        logger.info("Checking for verified topics for category correction...")
-        
         # 1. Lock and Update Topic to 'verified' (keep analysis_status while working)
         query = (
             select(Topic)
@@ -94,7 +92,8 @@ Respond with ONLY the category name in lowercase. No explanation, no punctuation
             
             # Basic validation
             if suggested_category not in VALID_CATEGORIES:
-                logger.warning(f"AI suggested non-standard category: {suggested_category}")
+                logger.warning(f"AI suggested non-standard category: {suggested_category}. Falling back to existing.")
+                suggested_category = topic.category or "general"
             
             # Update Topic
             old_category = topic.category
@@ -105,8 +104,9 @@ Respond with ONLY the category name in lowercase. No explanation, no punctuation
             await update_job_status(session, job_id, "SUCCESS", result={"topic_id": topic.id, "old_category": old_category, "new_category": suggested_category})
             
         except Exception as ai_err:
-            logger.error(f"AI Error during categorization: {ai_err}")
+            logger.error(f"AI Error during categorization for topic {topic.id}: {ai_err}")
             await update_job_status(session, job_id, "FAILED", error=str(ai_err))
+            # Set to 'failed' so we don't loop forever, but it can be reset manually
             topic.analysis_status = 'failed'
         
         session.add(topic)
@@ -115,7 +115,7 @@ Respond with ONLY the category name in lowercase. No explanation, no punctuation
         return True
         
     except Exception as e:
-        logger.error(f"Error in category correction agent: {e}")
+        logger.error(f"Error in category correction agent topic {topic.id if 'topic' in locals() and topic else 'unknown'}: {e}")
         try:
             if 'job_id' in locals():
                 await update_job_status(session, job_id, "FAILED", error=str(e))
@@ -133,7 +133,8 @@ async def worker_loop():
                 processed_something = await process_category_correction(session)
                 
             if not processed_something:
-                await asyncio.sleep(10) # Less frequent than others as it's the final stage
+                logger.debug("💤 No verified topics for category correction.")
+                await asyncio.sleep(15) # Pulse every 15s when idle
             else:
                 await asyncio.sleep(1)
                 

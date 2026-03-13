@@ -200,13 +200,14 @@ class GenerateTopicAnalysisJob:
                 topic_ref = t_res.scalar_one_or_none()
                 if topic_ref:
                     topic_ref.status = 'analysis_failed'
+                    topic_ref.analysis_status = 'pipeline_failed' # Allow retry
                     topic_ref.overall_sentiment = 'error'
                     if not topic_ref.metadata_:
                         topic_ref.metadata_ = {}
                     topic_ref.metadata_['last_error'] = error_msg[:200]
                     topic_ref.metadata_['error_at'] = str(datetime.now())
                     await self.db.commit()
-                    logger.info(f"Marked topic {topic_id} as 'analysis_failed'")
+                    logger.info(f"Marked topic {topic_id} as 'analysis_failed' / 'pipeline_failed'")
             except Exception as e2:
                 logger.error(f"Failed to set error state: {e2}")
             

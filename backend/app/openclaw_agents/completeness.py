@@ -70,8 +70,6 @@ async def verify_next_topic(session: AsyncSession) -> bool:
     Uses FOR UPDATE SKIP LOCKED to ensure safe concurrent processing.
     """
     try:
-        logger.info("Checking for completed topics to verify...")
-        
         # Select 1 topic that is marked 'complete'
         query = (
             select(Topic)
@@ -142,9 +140,10 @@ async def worker_loop():
                 processed_something = await verify_next_topic(session)
                 
             if not processed_something:
-                await asyncio.sleep(5)
+                logger.debug("💤 No completed topics to verify.")
+                await asyncio.sleep(10) # 10s idle pulse
             else:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
                 
         except Exception as e:
             logger.error(f"Critical error in completeness worker loop: {e}")
