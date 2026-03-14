@@ -55,7 +55,7 @@ async function getHeroTopics(): Promise<Topic[]> {
                     : (t.updated_at_str || "Recently"),
           commentCount: t.comment_count || 0,
           sources: formattedSources,
-          slug: t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+          slug: t.slug || t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
           status: t.badge || "DEVELOPING",
           isPremium: t.is_premium ?? false,
           intelligenceLevel: t.intelligence_level ?? "Standard",

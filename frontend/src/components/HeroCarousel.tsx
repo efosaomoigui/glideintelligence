@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import TopicAutoRefresher from "./TopicAutoRefresher";
 
 interface Topic {
   id: string | number;
@@ -170,6 +171,35 @@ function SponsoredSpotlight() {
   );
 }
 
+const truncateSummary = (text: string, maxWords: number = 45) => {
+  if (!text) return "";
+  const words = text.split(/\s+/);
+  
+  // If it's already short, just ensure it ends with a dot
+  if (words.length <= maxWords) {
+    const trimmed = text.trim();
+    if (trimmed.endsWith('.') || trimmed.endsWith('!') || trimmed.endsWith('?')) return trimmed;
+    return trimmed + '.';
+  }
+  
+  // Take first maxWords
+  const truncatedText = words.slice(0, maxWords).join(" ");
+  
+  // Find last punctuation in the truncated text
+  const lastPunctuation = Math.max(
+    truncatedText.lastIndexOf("."),
+    truncatedText.lastIndexOf("!"),
+    truncatedText.lastIndexOf("?")
+  );
+  
+  // If punctuation exists and it's in the second half of the snippet, cut there
+  if (lastPunctuation !== -1 && lastPunctuation > truncatedText.length * 0.5) {
+    return truncatedText.substring(0, lastPunctuation + 1);
+  }
+  
+  return truncatedText.trim() + "...";
+};
+
 export default function HeroCarousel({ topics: initialTopics }: { topics: Topic[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [topics, setTopics] = useState(initialTopics);
@@ -200,6 +230,7 @@ export default function HeroCarousel({ topics: initialTopics }: { topics: Topic[
 
   return (
     <section className="hero-intelligence">
+      <TopicAutoRefresher intervalMs={45000} />
       <div className="hero-container relative">
         {topics.length > 1 && (
           <div className="hero-carousel-nav">
@@ -259,7 +290,7 @@ export default function HeroCarousel({ topics: initialTopics }: { topics: Topic[
 
           <div className="hero-summary">
             <div className="summary-tag">60-Second Brief</div>
-            <div className="summary-content">{topic.summary}</div>
+            <div className="summary-content">{truncateSummary(topic.summary)}</div>
 
             {topic.wyntk && topic.wyntk.length > 0 && (
               <ul className="summary-bullets">

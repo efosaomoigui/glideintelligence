@@ -366,7 +366,7 @@ def trend_update_job(self, job_id: str = None):
                     )
                     .join(TopicArticle, Topic.id == TopicArticle.topic_id)
                     .join(RawArticle, TopicArticle.article_id == RawArticle.id)
-                    .where(RawArticle.published_at >= str(since))
+                    .where(RawArticle.published_at >= since)
                     .group_by(Topic.id)
                 )
                 

@@ -442,7 +442,7 @@
     z-index: 100;
   }
   .carousel-btn {
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
     backdrop-filter: blur(4px);
     border-radius: 50%;
     width: 40px;

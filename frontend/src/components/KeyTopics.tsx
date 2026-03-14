@@ -5,6 +5,7 @@ import Link from "next/link";
 
 interface KeyTopicItem {
   title: string;
+  slug: string;
   views: string;
   timeAgo: string;
 }
@@ -27,8 +28,7 @@ export default function KeyTopics({ title, topics: initialTopics }: KeyTopicsPro
       if (!topicId) return;
       
       setTopics(prev => prev.map(t => {
-        const slug = t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        if (slug === String(topicId) || String(t.title) === String(topicId)) {
+        if (t.slug === String(topicId) || t.title === String(topicId)) {
           // Attempt to format raw view count or append K/M
           let newViews = t.views;
           if (viewCount !== undefined) {
@@ -50,14 +50,13 @@ export default function KeyTopics({ title, topics: initialTopics }: KeyTopicsPro
       <div className="sidebar-title">{title}</div>
       <div className="key-topics-list">
         {topics.map((topic, i) => {
-          const slug = topic.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
           return (
           <a key={i} href="#" onClick={(e) => {
             e.preventDefault();
             window.dispatchEvent(new CustomEvent("open-flyout", {
-              detail: { id: slug, slug } // Backend/Flyout logic will handle matching slug as id
+              detail: { id: topic.slug, slug: topic.slug } // Backend/Flyout logic will handle matching slug as id
             }));
-          }} className="key-topic open-detail" data-id={slug}>
+          }} className="key-topic open-detail" data-id={topic.slug}>
             <div className="key-topic-title">{topic.title}</div>
             <div className="key-topic-meta">
               <span>{topic.views}</span>

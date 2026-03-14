@@ -56,6 +56,7 @@ class PollCreate(PollBase):
 class PollSchema(PollBase):
     id: int
     topic_id: Optional[int] = None
+    topic_title: Optional[str] = None
     created_at: datetime
     total_votes: int
     options: List[PollOptionSchema] = []

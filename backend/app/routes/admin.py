@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
+import datetime
+import asyncio
 
 from app.database import get_db
 from app.models import Job, AIProvider, FeatureFlag, SourceHealth, Source
@@ -391,8 +393,62 @@ async def create_or_update_ai_provider(provider_data: AIProviderCreate, db: Asyn
     
     await db.commit()
     await db.refresh(provider)
-    await db.refresh(provider)
     return provider
+
+@router.post("/settings/ai-providers/{provider_name}/verify")
+async def verify_ai_provider(
+    provider_name: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Verify if AI provider is working and has tokens."""
+    result = await db.execute(select(AIProvider).where(AIProvider.name == provider_name))
+    provider = result.scalar_one_or_none()
+    
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+        
+    status = "unknown"
+    error_msg = None
+    
+    try:
+        if provider.name.lower() in ["gemini", "google"]:
+            from app.services.ai.gemini_service import GeminiService
+            service = GeminiService()
+            # Simple test call
+            await asyncio.to_thread(service.generate_content, "Hello", model=provider.model, max_tokens=5)
+            status = "active"
+        elif provider.name.lower() in ["claude", "anthropic"]:
+            from app.services.ai.claude_service import ClaudeService
+            service = ClaudeService(api_key=provider.api_key)
+            # Use 'claude-3-haiku-20240307' for lightweight health checks if possible
+            # but default to the provider's configured model for absolute verification
+            await asyncio.to_thread(service.generate_content, "Hi", model=provider.model, max_tokens=10)
+            status = "active"
+        elif provider.name.lower() == "openai":
+            from app.services.ai.openai_service import OpenAIService
+            service = OpenAIService(api_key=provider.api_key)
+            await asyncio.to_thread(service.generate_content, "Hello", model=provider.model, max_tokens=5)
+            status = "active"
+        elif provider.name.lower() == "ollama":
+            from app.services.ai.ollama_service import ollama_service
+            if ollama_service.is_available():
+                status = "active"
+            else:
+                status = "error"
+                error_msg = "Ollama not reachable"
+        else:
+            status = "active" # Assume active if unknown type but configured? 
+            
+    except Exception as e:
+        status = "error"
+        error_msg = str(e)
+        
+    provider.status = status
+    provider.last_checked = datetime.datetime.utcnow()
+    await db.commit()
+    
+    return {"status": status, "error": error_msg, "last_checked": provider.last_checked}
 
 @router.post("/settings/ai-providers/update")
 async def update_ai_provider(
@@ -410,6 +466,8 @@ async def update_ai_provider(
     model = form.get("model")
     api_url = form.get("api_url")
     api_key = form.get("api_key")
+    priority = int(form.get("priority", 0))
+    daily_budget = float(form.get("daily_budget_usd", 5.0))
     
     result = await db.execute(select(AIProvider).where(AIProvider.name == original_name))
     provider = result.scalar_one_or_none()
@@ -418,6 +476,8 @@ async def update_ai_provider(
         raise HTTPException(status_code=404, detail="Provider not found")
     
     provider.model = model
+    provider.priority = priority
+    provider.daily_budget_usd = daily_budget
     if api_url:
         provider.api_url = api_url
     else:
@@ -776,3 +836,59 @@ async def toggle_user_active(
     )
     
     return RedirectResponse(url="/admin/users-ui", status_code=303)
+
+@router.get("/agents/status")
+async def get_agents_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Get the pause status of all AI agents."""
+    agents = ["intelligence", "completeness", "category"]
+    status = {}
+    
+    for agent in agents:
+        key = f"agent_{agent}_paused"
+        res = await db.execute(select(FeatureFlag).where(FeatureFlag.key == key))
+        flag = res.scalar_one_or_none()
+        status[agent] = "paused" if (flag and flag.enabled) else "active"
+        
+    return status
+
+@router.post("/agents/toggle")
+async def toggle_agent(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Toggle the pause status of an AI agent."""
+    data = await request.json()
+    agent = data.get("agent") # intelligence, completeness, category
+    
+    if agent not in ["intelligence", "completeness", "category"]:
+        raise HTTPException(status_code=400, detail="Invalid agent name")
+        
+    key = f"agent_{agent}_paused"
+    res = await db.execute(select(FeatureFlag).where(FeatureFlag.key == key))
+    flag = res.scalar_one_or_none()
+    
+    if not flag:
+        flag = FeatureFlag(key=key, enabled=True)
+        db.add(flag)
+    else:
+        flag.enabled = not flag.enabled
+        
+    await db.commit()
+    await db.refresh(flag)
+    
+    # Audit Log
+    from app.services.audit_service import log_action
+    await log_action(
+        db,
+        user_id=current_user.id,
+        action="TOGGLE_AGENT",
+        target=f"AGENT:{agent.upper()}",
+        details=f"Paused: {flag.enabled}",
+        ip_address=request.client.host if request.client else None
+    )
+    
+    return {"agent": agent, "status": "paused" if flag.enabled else "active"}

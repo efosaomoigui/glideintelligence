@@ -114,7 +114,7 @@ class CrawlerService:
                 title=title,
                 url=entry.link,
                 content=content,
-                published_at=str(published) if published else None,
+                published_at=published,
                 author=entry.get("author", "Unknown"),
                 image_url=None, 
                 language="en", # Defaulting to en for now

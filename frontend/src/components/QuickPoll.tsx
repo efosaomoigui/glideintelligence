@@ -7,9 +7,11 @@ interface QuickPollProps {
   poll?: any;
   userVotedOptionId?: number | null;
   onVoteSuccess?: () => void;
+  titleBelow?: boolean;
+  topic_title?: string;
 }
 
-export default function QuickPoll({ poll: initialPoll, userVotedOptionId, onVoteSuccess }: QuickPollProps = {}) {
+export default function QuickPoll({ poll: initialPoll, userVotedOptionId, onVoteSuccess, titleBelow = false, topic_title }: QuickPollProps = {}) {
   const { user: currentUser } = useAuth();
   const [poll, setPoll] = useState<any>(initialPoll);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -117,6 +119,21 @@ export default function QuickPoll({ poll: initialPoll, userVotedOptionId, onVote
 
   return (
     <div>
+      {/* User request: topic --> quick polls --> questions--> options */}
+      {(topic_title || poll.topic_title) && (
+        <div style={{ 
+          fontSize: "0.85rem", 
+          fontWeight: 700, 
+          color: "#e67e22", 
+          marginBottom: "8px", 
+          textTransform: "capitalize", 
+          letterSpacing: "0.05em",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          paddingBottom: "8px"
+        }}>
+          {topic_title || poll.topic_title}
+        </div>
+      )}
       <div className="sidebar-title-flyout" style={{ marginBottom: "12px" }}>Quick Poll</div>
       <div className="poll-question-flyout" style={{lineHeight: 1.4, fontSize: "1.08rem", fontWeight: 600, color: "#fff", marginBottom: "20px", fontFamily: "var(--serif)"}}>{poll.question}</div>
       <div className="poll-options" style={{display: "flex", flexDirection: "column", gap: "10px"}}>

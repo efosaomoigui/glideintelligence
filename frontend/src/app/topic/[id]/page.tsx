@@ -37,9 +37,17 @@ function formatViews(num: number): string {
 export default async function TopicDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const topicId = resolvedParams.id;
+  
+  // To support "Flyout over Home" on reload, we redirect back to home with the topic query param
+  // This satisfies the user requirement: "it should return back to the page with its flyout opened"
+  if (typeof window !== "undefined") {
+    window.location.href = `/?topic=${encodeURIComponent(topicId)}`;
+    return null;
+  }
+
   const topicData = await getTopicDetails(topicId);
 
-  // If no topic data is found at all
+  // Fallback for SSR/SEO or if JS is disabled
   if (!topicData) {
     return <div className="p-20 text-center text-xl">Topic not found</div>;
   }

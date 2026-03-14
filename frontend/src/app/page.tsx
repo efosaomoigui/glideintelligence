@@ -36,7 +36,7 @@ export default function Home() {
           <SidebarAdCard />
           <CommunityVoices />
           <div className="quick-poll">
-            <QuickPoll />
+            <QuickPoll titleBelow={true} />
           </div>
         </aside>
       </DynamicIntelligence>
@@ -66,7 +66,7 @@ export default function Home() {
           defaultOpen={false}
         >
           <div className="quick-poll">
-            <QuickPoll />
+            <QuickPoll titleBelow={true} />
           </div>
         </MobileSidebarCollapsible>
       </div>

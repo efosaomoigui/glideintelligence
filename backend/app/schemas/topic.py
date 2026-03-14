@@ -85,6 +85,7 @@ class IntelligenceCardSchema(BaseModel):
 
 class TopicBase(BaseModel):
     title: str
+    slug: str
     description: Optional[str] = None
     is_trending: bool = False
 
@@ -103,6 +104,7 @@ class TopicTrendingSchema(TopicSchema):
     badge: Optional[str] = "Trending"
     ai_brief: Optional[str] = None
     bullets: List[str] = []
+    wyntk: List[str] = [] # Matches hero section requirement
     updated_at_str: Optional[str] = None
     perspectives: List[dict] = Field(default=[], validation_alias="frontend_perspectives")
     impact: List[dict] = []
@@ -142,7 +144,7 @@ class TopicTrendingSchema(TopicSchema):
         data: dict = {}
 
         # Standard ORM columns (safe to read via getattr since they're columns, not relationships)
-        for col in ('id', 'title', 'description', 'is_trending', 'category',
+        for col in ('id', 'title', 'slug', 'description', 'is_trending', 'category',
                     'overall_sentiment', 'sentiment_score', 'status', 'badge',
                     'source_count', 'article_count', 'created_at', 'updated_at',
                     'view_count', 'analysis_status'):
@@ -154,7 +156,7 @@ class TopicTrendingSchema(TopicSchema):
                 pass
 
         # Frontend-enriched attrs (computed strings or plain dicts)
-        for attr in ('ai_brief', 'bullets', 'updated_at_str', 'sources', 'engagement', 'intelligence_level', 'is_premium', 'impact'):
+        for attr in ('ai_brief', 'bullets', 'wyntk', 'updated_at_str', 'sources', 'engagement', 'intelligence_level', 'is_premium', 'impact'):
             val = obj_dict.get(attr)
             if val is not None:
                 data[attr] = val
@@ -185,8 +187,20 @@ class TopicTrendingSchema(TopicSchema):
         
         # Enhanced metadata
         metadata = obj_dict.get('metadata_') or {}
-        data['key_takeaways'] = metadata.get('key_takeaways')
-        data['core_drivers'] = metadata.get('core_drivers', [])
+        data['key_takeaways'] = data.get('key_takeaways') or metadata.get('key_takeaways')
+        data['core_drivers'] = data.get('core_drivers') or metadata.get('core_drivers', [])
+
+        # Fallback for wyntk if not explicitly set
+        if not data.get('wyntk') and 'analysis' in data and data['analysis']:
+            # Try to get from analysis object directly
+            analysis = data['analysis']
+            data['wyntk'] = (
+                getattr(analysis, 'what_you_need_to_know', None) 
+                or getattr(analysis, 'key_points', None)
+                or data.get('bullets', [])
+            )
+        elif not data.get('wyntk'):
+            data['wyntk'] = data.get('bullets', [])
 
         return data
 

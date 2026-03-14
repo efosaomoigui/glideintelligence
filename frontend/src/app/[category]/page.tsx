@@ -16,6 +16,12 @@ import MobileHeader from "@/components/MobileHeader";
 /* ──────────────────────────────────────────────────────
    ADAPTER: Map API topic -> TopicCard prop shape
 ────────────────────────────────────────────────────── */
+function truncateText(text: string, maxChars: number = 350): string {
+  if (!text || text.length <= maxChars) return text;
+  const truncated = text.slice(0, maxChars);
+  return truncated.slice(0, truncated.lastIndexOf(" ")) + "...";
+}
+
 function adaptTopic(t: any) {
   const perspectives = (t.source_perspectives || t._perspectives_data || []).map((p: any) => ({
     source: p.source_name || p.frame_label || "Source",
@@ -40,13 +46,15 @@ function adaptTopic(t: any) {
   return {
     id: String(t.id),
     title: t.title,
+    slug: t.slug,
     category: t.category || t.badge || "General",
     isDeveloping: t.is_trending || t.status === "developing",
     updatedAt: t.updated_at_str || t.updatedAt || "Recently",
-    brief: t.ai_brief || t.description || "",
+    brief: truncateText(t.ai_brief || t.description || ""),
     perspectives: perspectives.length ? perspectives : [
-      { source: "Local Media", sentiment: "neutral" as const, score: 50 },
-      { source: "International", sentiment: "neutral" as const, score: 40 },
+      { source: "Nigerian Media", sentiment: "positive" as const, score: 75 },
+      { source: "International", sentiment: "neutral" as const, score: 50 },
+      { source: "Social Media", sentiment: "neutral" as const, score: 45 },
     ],
     impacts: impacts.length ? impacts : [
       { icon: "📊", title: "Analysis", value: "Intelligence synthesis in progress" },
@@ -338,11 +346,13 @@ export default function CategoryPage() {
           label: "Trending Context",
           value: apiPulse.context?.name || "Aggregating data...",
           text: apiPulse.context?.description || "Monitoring latest developments.",
+          id: apiPulse.context?.id,
         },
         {
           label: "Regional Focus",
           value: apiPulse.regional?.name || "ECOWAS",
           text: apiPulse.regional?.description || "Cross-border impact analysis in progress.",
+          id: apiPulse.regional?.id,
         },
       ]
     : [

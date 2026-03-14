@@ -252,6 +252,27 @@ async def admin_dashboard(
     )
     top_viewed_topics = top_viewed_topics_res.all()
 
+    # AI Details (Budget & Status)
+    providers_res = await db.execute(select(AIProvider).where(AIProvider.enabled == True))
+    providers = providers_res.scalars().all()
+    
+    provider_details = []
+    for p in providers:
+        cost_today = provider_costs.get(p.name, 0.0)
+        remaining = max(0, p.daily_budget_usd - cost_today)
+        pct_used = (cost_today / p.daily_budget_usd * 100) if p.daily_budget_usd > 0 else 100
+        
+        provider_details.append({
+            "name": p.name,
+            "model": p.model,
+            "budget": p.daily_budget_usd,
+            "used": cost_today,
+            "remaining": remaining,
+            "pct_used": pct_used,
+            "status": p.status or "unknown",
+            "last_checked": p.last_checked.strftime('%Y-%m-%d %H:%M:%S') if p.last_checked else "Never"
+        })
+
     stats = {
         "total_sources": source_count or 0,
         "active_sources": active_source_count or 0,
@@ -262,7 +283,9 @@ async def admin_dashboard(
         "today_count": today_count or 0,
         "ai_cost_today": ai_cost_today,
         "ai_tokens_today": ai_tokens_today,
+        "total_remaining": sum(p["remaining"] for p in provider_details),
         "provider_costs": provider_costs,
+        "provider_details": provider_details,
         "chart_labels": vol_labels,
         "volume_data": vol_data,
         "topic_data": topic_data,

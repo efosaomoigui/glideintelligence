@@ -6,6 +6,7 @@ interface InsightItem {
   label: string;
   value: string;
   text: string;
+  id?: number | string;
 }
 
 interface VerticalInsightsProps {
@@ -29,13 +30,39 @@ export default function VerticalInsights({ title, color, items }: VerticalInsigh
         {title}
       </div>
 
-      {items.map((item, i) => (
-        <div key={i} className="insight-item">
-          <div className="insight-label">{item.label}</div>
-          <div className="insight-value">{item.value}</div>
-          <div className="insight-text">{item.text}</div>
-        </div>
-      ))}
+      {items.map((item, i) => {
+        const words = item.text.split(/\s+/);
+        const isTruncated = words.length > 30;
+        const displayText = isTruncated ? words.slice(0, 30).join(" ") + "..." : item.text;
+
+        const handleOpenFlyout = () => {
+          if (!item.id) return;
+          window.dispatchEvent(
+            new CustomEvent("open-flyout", {
+              detail: { id: String(item.id) },
+            })
+          );
+        };
+
+        return (
+          <div key={i} className="insight-item">
+            <div className="insight-label">{item.label}</div>
+            <div className="insight-value">{item.value}</div>
+            <div className="insight-text">
+              {displayText}
+              {item.id && (
+                <button 
+                  onClick={handleOpenFlyout}
+                  className="read-more-pulse"
+                  style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.75rem', fontWeight: 'bold', marginTop: '4px', textDecoration: 'underline' }}
+                >
+                  Read more analysis
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

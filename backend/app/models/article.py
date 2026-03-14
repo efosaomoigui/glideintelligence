@@ -18,7 +18,7 @@ class RawArticle(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     author: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    published_at: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Keep as string for now to match raw data? Or better datetime.
+    published_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Extended Content Fields

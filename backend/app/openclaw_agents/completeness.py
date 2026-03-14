@@ -19,7 +19,7 @@ from app.database import AsyncSessionLocal
 from app.models.topic import Topic, TopicAnalysis
 from app.utils.jobs import create_job_record, update_job_status
 
-def is_valid_analysis(analysis: TopicAnalysis) -> bool:
+def is_valid_analysis(analysis: TopicAnalysis, topic: Topic = None) -> bool:
     """
     Verifies intelligence integrity with 'Soft Validation'.
     - Mandatory: executive_summary
@@ -30,8 +30,10 @@ def is_valid_analysis(analysis: TopicAnalysis) -> bool:
         return False
         
     # Check Executive Summary (STRICT)
-    if not analysis.executive_summary or len(analysis.executive_summary.strip()) < 15:
-        logger.warning(f"CRITICAL: executive_summary is missing or too short.")
+    # The Intelligence Agent populates 'summary' in TopicAnalysis, but we also check executive_summary
+    narrative = analysis.executive_summary or analysis.summary
+    if not narrative or len(narrative.strip()) < 15:
+        logger.warning(f"CRITICAL: narrative (summary/executive_summary) is missing or too short.")
         return False
         
     # Check List Fields (SOFT)
@@ -50,16 +52,27 @@ def is_valid_analysis(analysis: TopicAnalysis) -> bool:
             logger.info(f"SOFT WARN: {field_name} is empty.")
             missing_count += 1
                 
-    # If more than 2 list fields are missing, it's considered poor quality
+    # If more than 2 list fields are missing, check metadata fallback (NEW)
     if missing_count > 2:
-        logger.warning(f"Topic failed soft validation (missing {missing_count} fields).")
+        # Fallback to key_takeaways/core_drivers in metadata if available
+        # The Intelligence Agent often stores extra data there instead of TopicAnalysis directly
+        metadata = topic.metadata_ if topic else {}
+        if metadata:
+            has_takeaways = metadata.get('key_takeaways') and isinstance(metadata['key_takeaways'], (list, str)) and len(metadata['key_takeaways']) > 0
+            has_drivers = metadata.get('core_drivers') and isinstance(metadata['core_drivers'], (list, str)) and len(metadata['core_drivers']) > 0
+            
+            if has_takeaways or has_drivers:
+                logger.info(f"Soft-match: Topic has data in metadata. Proceeding.")
+                return True
+
+        logger.warning(f"Topic failed soft validation (missing {missing_count} fields and no metadata fallback).")
         return False
         
     # Confidence Score (SOFT)
     if analysis.confidence_score is None or analysis.confidence_score < 0.3:
         logger.warning(f"Low confidence score: {analysis.confidence_score}")
         # We still allow it to pass if the summary is long enough
-        if len(analysis.executive_summary) < 100:
+        if len(narrative) < 100:
             return False
         
     return True
@@ -89,6 +102,7 @@ async def verify_next_topic(session: AsyncSession) -> bool:
         logger.info(f"🔍 Locked Topic {topic.id} for Completeness Verification: '{topic.title}'")
         
         # Create Job record
+        from app.utils.jobs import create_job_record, update_job_status
         job_id = await create_job_record(session, "COMPLETENESS_AGENT", payload={"topic_id": topic.id, "title": topic.title})
         await update_job_status(session, job_id, "RUNNING")
         
@@ -96,15 +110,18 @@ async def verify_next_topic(session: AsyncSession) -> bool:
         await session.commit()
         
         # Verify the fields
-        is_valid = is_valid_analysis(topic.analysis)
+        # Pass the topic itself to validation so it can check metadata
+        is_valid = is_valid_analysis(topic.analysis, topic)
         
         if is_valid:
             logger.info(f"✅ Topic {topic.id} passed completeness check! Marking as 'verified'.")
             topic.analysis_status = 'verified'
+            from app.utils.jobs import update_job_status
             await update_job_status(session, job_id, "SUCCESS", result={"topic_id": topic.id, "status": "verified"})
         else:
             logger.warning(f"❌ Topic {topic.id} failed completeness check! Resetting to 'pending'.")
             topic.analysis_status = 'pending'
+            from app.utils.jobs import update_job_status
             await update_job_status(session, job_id, "FAILED", error="Validation failed: missing or truncated fields")
             # Clear out the bad data to force a totally fresh run
             if topic.analysis:
@@ -125,6 +142,7 @@ async def verify_next_topic(session: AsyncSession) -> bool:
         logger.error(f"Error during completeness validation: {e}")
         try:
             if 'job_id' in locals():
+                from app.utils.jobs import update_job_status
                 await update_job_status(session, job_id, "FAILED", error=str(e))
         except:
             pass
@@ -132,11 +150,20 @@ async def verify_next_topic(session: AsyncSession) -> bool:
 
 async def worker_loop():
     """Continuously poll the database for completed topics to verify."""
-    logger.info("🛡️ Starting Completeness Agent worker loop...")
+    logger.info("Starting Completeness Agent worker loop...")
     
     while True:
         try:
             async with AsyncSessionLocal() as session:
+                # Check for pause flag
+                from app.models.settings import FeatureFlag
+                res = await session.execute(select(FeatureFlag).where(FeatureFlag.key == "agent_completeness_paused"))
+                flag = res.scalar_one_or_none()
+                if flag and flag.enabled:
+                    logger.debug("Completeness Agent is paused.")
+                    await asyncio.sleep(15)
+                    continue
+
                 processed_something = await verify_next_topic(session)
                 
             if not processed_something:

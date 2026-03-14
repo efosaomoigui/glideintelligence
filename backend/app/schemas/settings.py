@@ -10,9 +10,12 @@ class AIProviderCreate(BaseModel):
     model: str
     enabled: bool = True
     priority: int = 0
+    daily_budget_usd: float = 5.0
 
 class AIProviderSchema(AIProviderCreate):
     id: int
+    status: Optional[str] = "unknown"
+    last_checked: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

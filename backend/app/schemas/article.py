@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 
 class ArticleEntitySchema(BaseModel):
@@ -14,7 +14,7 @@ class ArticleBase(BaseModel):
     url: str
     description: Optional[str] = None
     author: Optional[str] = None
-    published_at: Optional[str] = None
+    published_at: Optional[Union[datetime, str]] = None
     image_url: Optional[str] = None
     sentiment_score: Optional[float] = None
     category: Optional[str] = None

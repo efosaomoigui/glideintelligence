@@ -11,13 +11,16 @@ python -c "import spacy; spacy.load('en_core_web_sm')" 2>/dev/null || {
 }
 echo "✓ spaCy model ready."
 
-# Run migrations
-echo "Running database migrations..."
-alembic upgrade head
+# Run migrations and initialization only if RUN_INITIALIZATION is true
+if [ "$RUN_INITIALIZATION" = "true" ]; then
+    echo "Running database migrations..."
+    alembic upgrade head
 
-# Run data initialization
-echo "Initializing essential data..."
-python init_all.py
+    echo "Initializing essential data..."
+    python init_all.py
+else
+    echo "Skipping initialization (RUN_INITIALIZATION not set to true)"
+fi
 
 # Hand off to the original container command
 exec "$@"

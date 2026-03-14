@@ -108,14 +108,29 @@ class NewsService:
              # Calculate time ago for fallback hero
              hero_article.updated = "Recently"
              if hero_article.published_at:
-                 diff = datetime.utcnow() - hero_article.published_at
-                 seconds = diff.total_seconds()
-                 if seconds < 3600:
-                     hero_article.updated = f"{int(seconds // 60)} min ago"
-                 elif seconds < 86400:
-                     hero_article.updated = f"{int(seconds // 3600)} hours ago"
-                 else:
-                     hero_article.updated = f"{int(seconds // 86400)} days ago"
+                 try:
+                     # Handle both string (legacy) and datetime (new)
+                     pub_at = hero_article.published_at
+                     if isinstance(pub_at, str):
+                         from dateutil import parser
+                         pub_at = parser.parse(pub_at)
+                     
+                     if pub_at.tzinfo:
+                         diff = datetime.now(pub_at.tzinfo) - pub_at
+                     else:
+                         diff = datetime.utcnow() - pub_at
+                         
+                     seconds = diff.total_seconds()
+                     if seconds < 3600:
+                         hero_article.updated = f"{int(seconds // 60)} min ago"
+                     elif seconds < 86400:
+                         hero_article.updated = f"{int(seconds // 3600)} hours ago"
+                     else:
+                         hero_article.updated = f"{int(seconds // 86400)} days ago"
+                 except Exception as e:
+                     import logging
+                     logging.error(f"Error calculating time ago: {e}")
+                     hero_article.updated = "Recently"
 
              # Fallback defaults
              hero_article.source_count = 1
@@ -259,6 +274,7 @@ class NewsService:
         # 2. Trending Context (Top Topic)
         top_topic = topics[0]
         context = {
+            "id": getattr(top_topic, 'id', None),
             "label": getattr(top_topic, 'badge', 'Trending') or "Trending",
             "name": top_topic.title,
             "description": top_topic.description or "Dominating coverage this week."
@@ -270,6 +286,7 @@ class NewsService:
             regional_topic = topics[1]
             
         regional = {
+            "id": getattr(regional_topic, 'id', None) if regional_topic else None,
             "label": "Regional Focus",
             "name": regional_topic.title if regional_topic else "ECOWAS",
             "description": regional_topic.description if regional_topic else "Monitoring cross-border developments."
@@ -329,32 +346,65 @@ class NewsService:
             topic.badge = topic.category or "Developing"
             if not topic.category:
                 topic.category = "General"
-             
         # 2. AI Brief and Bullets
         # Priority: executive_summary > summary. For bullets: what_you_need_to_know > facts
         # Safe check for analysis relationship
         analysis = topic.analysis if 'analysis' in topic.__dict__ else None
         
-        if analysis and (getattr(analysis, 'executive_summary', None) or getattr(analysis, 'summary', None)):
-            topic.ai_brief = getattr(analysis, 'executive_summary', None) or analysis.summary
-            topic.bullets = (
+        # Initialize attributes consistently
+        topic.ai_brief = None
+        topic.wyntk = []
+        topic.bullets = []
+        
+        # Initialize premium detection
+        has_premium = False
+        
+        if analysis:
+            # 1. AI Brief (Executive Summary > Summary)
+            topic.ai_brief = getattr(analysis, 'executive_summary', None) or getattr(analysis, 'summary', None)
+            
+            # 2. Bullets / WYNTK
+            topic.wyntk = (
                 getattr(analysis, 'what_you_need_to_know', None)
+                or getattr(analysis, 'key_points', None)
                 or getattr(analysis, 'facts', None)
                 or []
             )
-        else:
-            # Clean description — strip any internal placeholder text from clustering
+            topic.bullets = topic.wyntk # Sync bullets for backward compatibility in UI
+            
+            if getattr(analysis, 'executive_summary', None) or getattr(analysis, 'what_you_need_to_know', None):
+                has_premium = True
+        
+        # Fallback from metadata if still empty
+        metadata = getattr(topic, 'metadata_', None) or {}
+        if not topic.ai_brief and metadata.get('key_takeaways'):
+            topic.ai_brief = metadata.get('key_takeaways')
+            has_premium = True
+            
+        if not topic.wyntk and metadata.get('core_drivers'):
+            topic.wyntk = metadata.get('core_drivers')
+            topic.bullets = topic.wyntk
+            has_premium = True
+
+        if not topic.ai_brief:
+            # Clean description
             raw_desc = topic.description or ""
             if not raw_desc or raw_desc.lower().startswith("topic driven by") or len(raw_desc) < 30:
                 topic.ai_brief = f"Intelligence analysis is being generated for this {(topic.category or 'developing').lower()} story. Key developments and their implications will appear shortly."
+                topic.bullets = [
+                    "Coverage from multiple sources is being aggregated for this topic.",
+                    "Sentiment analysis and regional impact assessment are in progress.",
+                    "Full intelligence brief will be available once analysis is complete."
+                ]
             else:
                 topic.ai_brief = raw_desc
-            # Provide informative fallback bullets
-            topic.bullets = [
-                "Coverage from multiple sources is being aggregated for this topic.",
-                "Sentiment analysis and regional impact assessment are in progress.",
-                "Full intelligence brief will be available once analysis is complete."
-            ]
+                # If we have a good description but no AI bullets yet, 
+                # try to extract first sentences as bullets or use descriptive placeholders
+                sentences = [s.strip() for s in raw_desc.split('.') if len(s.strip()) > 10]
+                if len(sentences) > 1:
+                    topic.bullets = sentences[:3]
+                else:
+                    topic.bullets = ["Monitoring key developments in this rising story.", "Contextual enrichment underway."]
 
             if not topic.analysis:
                 topic.analysis = TopicAnalysis(
@@ -411,7 +461,7 @@ class NewsService:
         
         # 5b. Intelligence Level
         # 'complete' means OpenClaw has finished premium enrichment
-        if getattr(topic, 'analysis_status', None) == 'complete':
+        if getattr(topic, 'analysis_status', None) == 'complete' or has_premium:
             topic.intelligence_level = "Premium"
             topic.is_premium = True
         else:
@@ -714,7 +764,7 @@ class NewsService:
                 "comment_count": t.comment_count or 0,
                 "comments_count": t.comment_count or 0,
                 "updated_at_str": rel_time(t.updated_at),
-                "slug": t.title.lower().replace(" ", "-"),
+                "slug": t.slug,
             })
         return results, total
 
@@ -764,21 +814,21 @@ class NewsService:
             return article
         return None
 
-    async def get_topic_by_title(self, title: str) -> Optional[Topic]:
-        """Fetch full topic detail by title (case-insensitive)."""
+    async def get_topic_by_slug(self, slug: str) -> Optional[Topic]:
+        """Fetch full topic detail by its slug (direct lookup)."""
         query = (
             select(Topic)
             .options(
-                joinedload(Topic.analysis),
-                joinedload(Topic.sentiment_breakdown),
-                joinedload(Topic.source_perspectives),
-                joinedload(Topic.regional_impacts),
-                joinedload(Topic.intelligence_card),
-                joinedload(Topic.trends),
-                joinedload(Topic.videos),
-                joinedload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
+                selectinload(Topic.analysis),
+                selectinload(Topic.sentiment_breakdown),
+                selectinload(Topic.source_perspectives),
+                selectinload(Topic.regional_impacts),
+                selectinload(Topic.intelligence_card),
+                selectinload(Topic.trends),
+                selectinload(Topic.videos),
+                selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
             )
-            .where(func.lower(Topic.title) == func.lower(title))
+            .where(Topic.slug == slug)
         )
         result = await self.db.execute(query)
         topic = result.unique().scalar_one_or_none()

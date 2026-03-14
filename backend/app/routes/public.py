@@ -39,8 +39,10 @@ class SidebarPulse(BaseModel):
     sentiment_score: float
     sentiment_text: str
     trending_topic: str
+    trending_id: Optional[int] = None
     trending_text: str
     regional_focus: str
+    regional_id: Optional[int] = None
     regional_text: str
 
 class SidebarVoice(BaseModel):
@@ -122,8 +124,10 @@ async def get_sidebar(db: AsyncSession = Depends(get_db)):
         sentiment_score=bar_pct,
         sentiment_text=sentiment.get("text", "Tracking ongoing developments."),
         trending_topic=context.get("name", topics[0].title if topics else "Top Story"),
+        trending_id=context.get("id"),
         trending_text=context.get("description", "Dominating coverage this period."),
         regional_focus=regional.get("name", "ECOWAS"),
+        regional_id=regional.get("id"),
         regional_text=regional.get("description", "Monitoring cross-border developments."),
     )
 
@@ -221,10 +225,8 @@ async def get_topic_by_slug(
     slug: str,
     db: AsyncSession = Depends(get_db)
 ):
-    # Convert slug to title (e.g. "inflation-surge" -> "Inflation Surge")
-    title = slug.replace("-", " ")
     service = NewsService(db)
-    topic = await service.get_topic_by_title(title)
+    topic = await service.get_topic_by_slug(slug)
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
     return topic

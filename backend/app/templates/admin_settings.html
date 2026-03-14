@@ -15,6 +15,7 @@
                         <tr>
                             <th>Provider</th>
                             <th>Model</th>
+                            <th>Priority</th>
                             <th>Status</th>
                             <th>API URL</th>
                             <th>Actions</th>
@@ -22,9 +23,10 @@
                     </thead>
                     <tbody>
                         {% for provider in providers %}
-                        <tr>
+                         <tr>
                             <td style="font-weight: 600;">{{ provider.name }}</td>
                             <td style="color: var(--text-muted);">{{ provider.model }}</td>
+                            <td style="font-weight: 700;">{{ provider.priority }}</td>
                             <td>
                                 <form action="/api/admin/settings/ai-toggle" method="post" style="display:inline;">
                                     <input type="hidden" name="name" value="{{ provider.name }}">
@@ -37,12 +39,12 @@
                             <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">{{ provider.api_url or 'Default' }}</td>
                             <td>
                                 <button class="btn btn-sm btn-outline" 
-                                    onclick="openEditProviderModal('{{ provider.name }}', '{{ provider.model }}', '{{ provider.api_url or '' }}')">
+                                    onclick="openEditProviderModal('{{ provider.name }}', '{{ provider.model }}', '{{ provider.api_url or '' }}', '{{ provider.daily_budget_usd }}', '{{ provider.priority or 0 }}')">
                                     Edit
                                 </button>
                             </td>
                         </tr>
-                        {% endfor %}
+{% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -75,9 +77,44 @@
             </div>
         </div>
 
-        <!-- Maintenance Operations -->
+         <!-- Maintenance Operations -->
         <div class="card" style="grid-column: 1 / -1;">
-            <h2>Maintenance & Reset</h2>
+            <h2>Agent Controls & Maintenance</h2>
+            
+            <div style="margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Completeness Agent -->
+                <div style="padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border);">
+                    <div class="flex-between">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1rem;">Completeness Agent</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0;">Draft → Intelligence</p>
+                        </div>
+                        <form action="/api/admin/settings/feature-flag/toggle" method="post">
+                            <input type="hidden" name="flag_name" value="agent_completeness_paused">
+                            <button type="submit" class="btn btn-sm {% if flags.agent_completeness_paused %}btn-success{% else %}btn-warning{% endif %}">
+                                {{ "Resume" if flags.agent_completeness_paused else "Pause" }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Category Agent -->
+                <div style="padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border);">
+                    <div class="flex-between">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1rem;">Category Agent</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0;">Correction & Tagging</p>
+                        </div>
+                        <form action="/api/admin/settings/feature-flag/toggle" method="post">
+                            <input type="hidden" name="flag_name" value="agent_category_paused">
+                            <button type="submit" class="btn btn-sm {% if flags.agent_category_paused %}btn-success{% else %}btn-warning{% endif %}">
+                                {{ "Resume" if flags.agent_category_paused else "Pause" }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <div style="padding: 16px; background: rgba(220, 53, 69, 0.1); border-radius: 12px; border: 1px solid rgba(220, 53, 69, 0.2);">
                 <div class="flex-between">
                     <div style="max-width: 70%;">
@@ -112,6 +149,14 @@
                     <label class="form-label">Model Name</label>
                     <input type="text" name="model" class="form-control" placeholder="e.g. gpt-4-turbo" required>
                 </div>
+                 <div class="form-group">
+                    <label class="form-label">Daily Budget ($)</label>
+                    <input type="number" step="0.01" name="daily_budget_usd" class="form-control" value="5.00" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority (Higher = used first)</label>
+                    <input type="number" name="priority" class="form-control" value="10" required>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Base URL (Optional)</label>
                     <input type="text" name="api_url" class="form-control" placeholder="https://api.openai.com/v1">
@@ -143,6 +188,14 @@
                     <label class="form-label">Model Name</label>
                     <input type="text" id="edit_model" name="model" class="form-control" required>
                 </div>
+                 <div class="form-group">
+                    <label class="form-label">Daily Budget ($)</label>
+                    <input type="number" step="0.01" id="edit_budget" name="daily_budget_usd" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <input type="number" id="edit_priority" name="priority" class="form-control" required>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Base URL</label>
                     <input type="text" id="edit_url" name="api_url" class="form-control">
@@ -156,11 +209,13 @@
     </div>
 
     <script>
-        function openEditProviderModal(name, model, url) {
+         function openEditProviderModal(name, model, url, budget, priority) {
             document.getElementById('edit_name_orig').value = name;
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_model').value = model;
             document.getElementById('edit_url').value = url;
+            document.getElementById('edit_budget').value = budget || '5.00';
+            document.getElementById('edit_priority').value = priority || '0';
             document.getElementById('editProviderModal').style.display = 'flex';
         }
         

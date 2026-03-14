@@ -11,14 +11,14 @@ async def fix_priorities():
         await db.execute(
             update(AIProvider)
             .where(AIProvider.name.ilike('%claude%'))
-            .values(priority=200, enabled=True)
+            .values(priority=300, enabled=True)
         )
         
-        # Make Gemini lower priority
+        # Make Gemini lower priority (fallback)
         await db.execute(
             update(AIProvider)
             .where(AIProvider.name.ilike('%gemini%'))
-            .values(priority=100, enabled=True)
+            .values(priority=200, enabled=True)
         )
         
         await db.commit()

@@ -62,6 +62,66 @@
         </div>
     </div>
 
+    <!-- AI Agent Controls -->
+    <div style="margin-bottom: 32px;">
+        <div class="flex-between" style="margin-bottom: 16px;">
+            <h2 style="margin: 0;">AI Agent Controls</h2>
+            <div class="text-sm text-muted">Manage background agent states</div>
+        </div>
+        <div class="grid grid-3" id="agent-controls-container">
+            <!-- Intelligence Agent -->
+            <div class="card" style="margin-bottom: 0; position: relative; overflow: hidden; border: 1px solid var(--border);">
+                <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 1.5rem;">🧠</span>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Intelligence Agent</div>
+                        <div class="text-sm text-muted">Analysis & Summarization</div>
+                    </div>
+                </div>
+                <div class="flex-between" style="margin-top: auto;">
+                    <div id="status-intelligence" class="text-sm font-semibold">Loading...</div>
+                    <button onclick="toggleAgent('intelligence')" id="btn-intelligence" class="btn btn-sm" style="padding: 4px 12px;">Toggle</button>
+                </div>
+            </div>
+
+            <!-- Completeness Agent -->
+            <div class="card" style="margin-bottom: 0; position: relative; overflow: hidden; border: 1px solid var(--border);">
+                <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 1.5rem;">🛡️</span>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Completeness Agent</div>
+                        <div class="text-sm text-muted">Validation & Repair</div>
+                    </div>
+                </div>
+                <div class="flex-between" style="margin-top: auto;">
+                    <div id="status-completeness" class="text-sm font-semibold">Loading...</div>
+                    <button onclick="toggleAgent('completeness')" id="btn-completeness" class="btn btn-sm" style="padding: 4px 12px;">Toggle</button>
+                </div>
+            </div>
+
+            <!-- Category Agent -->
+            <div class="card" style="margin-bottom: 0; position: relative; overflow: hidden; border: 1px solid var(--border);">
+                <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: rgba(139, 92, 246, 0.1); padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 1.5rem;">🏷️</span>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Category Agent</div>
+                        <div class="text-sm text-muted">Taxonomy Correction</div>
+                    </div>
+                </div>
+                <div class="flex-between" style="margin-top: auto;">
+                    <div id="status-category" class="text-sm font-semibold">Loading...</div>
+                    <button onclick="toggleAgent('category')" id="btn-category" class="btn btn-sm" style="padding: 4px 12px;">Toggle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Job Table -->
     <div class="card">
         <div class="card-header">
@@ -186,7 +246,77 @@
                 }
             });
         });
+
+        // Initialize Agent Controls
+        fetchAgentStatuses();
     });
+
+    async function fetchAgentStatuses() {
+        try {
+            const res = await fetch('/api/admin/agents/status');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            Object.keys(data).forEach(agent => {
+                updateAgentUI(agent, data[agent]);
+            });
+        } catch (err) {
+            console.error("Failed to fetch agent statuses:", err);
+        }
+    }
+
+    function updateAgentUI(agent, status) {
+        const statusEl = document.getElementById(`status-${agent}`);
+        const btnEl = document.getElementById(`btn-${agent}`);
+        
+        if (!statusEl || !btnEl) return;
+        
+        if (status === 'active') {
+            statusEl.innerText = "Active";
+            statusEl.style.color = "#10b981";
+            btnEl.innerText = "Pause";
+            btnEl.className = "btn btn-sm btn-outline";
+            btnEl.style.borderColor = "#ef4444";
+            btnEl.style.color = "#ef4444";
+        } else {
+            statusEl.innerText = "Paused";
+            statusEl.style.color = "#ef4444";
+            btnEl.innerText = "Resume";
+            btnEl.className = "btn btn-sm";
+            btnEl.style.backgroundColor = "#10b981";
+            btnEl.style.borderColor = "#10b981";
+            btnEl.style.color = "#fff";
+        }
+    }
+
+    async function toggleAgent(agent) {
+        const btn = document.getElementById(`btn-${agent}`);
+        if (!btn) return;
+        
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "...";
+        
+        try {
+            const res = await fetch('/api/admin/agents/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agent })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                updateAgentUI(agent, data.status);
+                showToast(`${agent.charAt(0).toUpperCase() + agent.slice(1)} agent ${data.status === 'paused' ? 'paused' : 'resumed'}`, 'success');
+            } else {
+                showToast(`Failed to toggle agent: ${res.statusText}`, 'error');
+            }
+        } catch (err) {
+            showToast(`Error: ${err.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
 
     // Toast Notification Helper
     function showToast(message, type = 'info') {

@@ -47,7 +47,9 @@
             <div style="font-size: 2rem; font-weight: 600; color: #fbbf24;">${{ "%.2f"|format(stats.ai_cost_today) }}</div>
              <div class="flex-between" style="margin-top: 8px;">
                  <span class="badge badge-warning">{{ stats.ai_tokens_today }} Tokens</span>
-                 <span style="font-size: 0.8rem; color: var(--text-muted);">Budget: $5.00</span>
+                 <span style="font-size: 0.8rem; color: var(--text-muted);">
+                    Remaining: ${{ "%.2f"|format(stats.total_remaining) }}
+                 </span>
             </div>
         </div>
 
@@ -105,14 +107,26 @@
                 <span class="badge badge-success">OK</span>
             </div>
 
-            <h2 style="margin-top: 32px;">AI Provider Spend (Today)</h2>
-            {% for name, cost in stats.provider_costs.items() %}
-            <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid var(--border);">
-                <span>{{ name|capitalize }}</span>
-                <span style="font-weight: 500;">${{ "%.4f"|format(cost) }}</span>
+            <h2 style="margin-top: 32px;">AI Provider Health</h2>
+            {% for provider in stats.provider_details %}
+            <div style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+                <div class="flex-between">
+                    <span style="font-weight: 500;">{{ provider.name|capitalize }}</span>
+                    <span class="badge {% if provider.status == 'active' %}badge-success{% elif provider.status == 'error' %}badge-danger{% else %}badge-warning{% endif %}">
+                        {{ provider.status|capitalize }}
+                    </span>
+                </div>
+                <div class="text-xs text-muted" style="margin-top: 4px;">
+                    Model: {{ provider.model }}<br>
+                    Budget: ${{ "%.2f"|format(provider.used) }} / ${{ "%.2f"|format(provider.budget) }}<br>
+                    Last Checked: <span id="check-{{ provider.name }}">{{ provider.last_checked }}</span>
+                </div>
+                <div style="margin-top: 8px;">
+                    <button class="btn btn-outline btn-xs" onclick="verifyProvider('{{ provider.name }}')">Verify Now</button>
+                </div>
             </div>
             {% else %}
-            <div class="text-muted" style="font-size: 0.8rem; padding: 8px 0;">No AI spend recorded today</div>
+            <div class="text-muted" style="font-size: 0.8rem; padding: 8px 0;">No active AI providers</div>
             {% endfor %}
         </div>
     </div>
@@ -161,6 +175,31 @@
 
 {% block scripts %}
 <script>
+    async function verifyProvider(name) {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = 'Checking...';
+        
+        try {
+            const response = await fetch(`/api/admin/settings/ai-providers/${name}/verify`, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.status === 'active') {
+                alert(`✅ ${name} is working correctly!`);
+            } else {
+                alert(`❌ Error for ${name}: ${data.error || 'Unknown error'}`);
+            }
+            window.location.reload();
+        } catch (e) {
+            alert('Failed to reach server');
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+
     // Chart Configuration
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.borderColor = '#334155';

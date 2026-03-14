@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import QuickPoll from "./QuickPoll";
 import "./flyout.css";
@@ -16,6 +16,7 @@ function formatViews(num: number): string {
 
 export default function DetailFlyout() {
   const [isOpen, setIsOpen] = useState(false);
+  const viewedTopicsRef = useRef<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [topicData, setTopicData] = useState<any>(null);
   const [seedCounts, setSeedCounts] = useState<{ viewCount?: number; commentCount?: number }>({});
@@ -48,7 +49,9 @@ export default function DetailFlyout() {
       setLoading(true);
       // Update URL without reload for topics
       if (slug) {
-        window.history.pushState({ articleId: id }, "", `/topic/${slug}`);
+        const currentPath = window.location.pathname;
+        const newUrl = `${currentPath}?topic=${encodeURIComponent(slug)}`;
+        window.history.pushState({ articleId: id, slug }, "", newUrl);
       }
 
       // All fetches use relative /api/ paths — proxied by Next.js to localhost:8000
@@ -114,6 +117,15 @@ export default function DetailFlyout() {
     };
     window.addEventListener("keydown", handleKeyDown);
 
+    // Initial check for topic in URL (handles reloads/shared links)
+    const urlParams = new URLSearchParams(window.location.search);
+    const topicSlug = urlParams.get("topic");
+    if (topicSlug) {
+      handleOpenFlyout(new CustomEvent("open-flyout", {
+        detail: { type: "topic", id: topicSlug, slug: topicSlug }
+      }));
+    }
+
     return () => {
       window.removeEventListener("open-flyout", handleOpenFlyout);
       window.removeEventListener("popstate", handlePopState);
@@ -128,12 +140,18 @@ export default function DetailFlyout() {
     setTopicData(null);
     
     if (updateHistory) {
-      // Go back to the homepage URL or previous URL
-      // If we directly pushed state, we should ideally go back
-      const isTopicUrl = window.location.pathname.startsWith('/topic/');
-      if (isTopicUrl) {
-         window.history.pushState({}, "", "/");
+      // Clean up only the topic query parameter, preserving the current page
+      const url = new URL(window.location.href);
+      url.searchParams.delete("topic");
+      // Also handle legacy utility paths if they are in the pathname
+      const utilityPaths = ["/search", "/subscribe", "/login", "/info", "/sponsor"];
+      let newPath = url.pathname;
+      if (utilityPaths.some(p => newPath.startsWith(p))) {
+        newPath = "/";
       }
+      
+      const nextUrl = url.searchParams.toString() ? `${newPath}?${url.searchParams.toString()}` : newPath;
+      window.history.pushState({}, "", nextUrl);
     }
   };
 
@@ -199,7 +217,7 @@ export default function DetailFlyout() {
                  </section>
                </div>
             ) : (
-               <FlyoutInnerContent topicData={topicData} seedViewCount={seedCounts.viewCount} seedCommentCount={seedCounts.commentCount} />
+               <FlyoutInnerContent topicData={topicData} seedViewCount={seedCounts.viewCount} seedCommentCount={seedCounts.commentCount} viewedTopicsRef={viewedTopicsRef} />
             )
           )}
         </div>
@@ -711,10 +729,12 @@ function FlyoutInnerContent({
   topicData,
   seedViewCount,
   seedCommentCount,
+  viewedTopicsRef
 }: {
   topicData: any;
   seedViewCount?: number;
   seedCommentCount?: number;
+  viewedTopicsRef: React.RefObject<Set<string>>;
 }) {
   const { user: currentUser } = useAuth();
   const [fetchedComments, setFetchedComments] = useState<any[]>([]);
@@ -744,19 +764,22 @@ function FlyoutInnerContent({
   useEffect(() => {
     if (!topicData?.id) return;
 
-    // 1. Persist view immediately and get true atomic DB count
-    fetch(`/api/topic/${topicData.id}/view`, { method: "POST" })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.view_count !== undefined) {
-          setLiveViewCount(data.view_count);
-          // Sync UI cards exactly to DB
-          window.dispatchEvent(new CustomEvent("topic-viewed", {
-            detail: { topicId: topicData.id, viewCount: data.view_count, commentCount: liveCommentCount }
-          }));
-        }
-      })
-      .catch(() => { /* best-effort */ });
+    // 1. Persist view immediately (but only once per session/mount to avoid double counting)
+    if (topicData?.id && viewedTopicsRef.current && !viewedTopicsRef.current.has(String(topicData.id))) {
+      viewedTopicsRef.current.add(String(topicData.id));
+      fetch(`/api/topic/${topicData.id}/view`, { method: "POST" })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.view_count !== undefined) {
+            setLiveViewCount(data.view_count);
+            // Sync UI cards exactly to DB
+            window.dispatchEvent(new CustomEvent("topic-viewed", {
+              detail: { topicId: topicData.id, viewCount: data.view_count, commentCount: liveCommentCount }
+            }));
+          }
+        })
+        .catch(() => { /* best-effort */ });
+    }
 
     // 2. Notify cards with optimistic +1 view immediately
     window.dispatchEvent(new CustomEvent("topic-viewed", {
@@ -905,18 +928,22 @@ function FlyoutInnerContent({
   };
 
   const title = topicData.title;
-  const brief = topicData.ai_brief || topicData.description || "No intelligence brief available at this time.";
-  const category = topicData.category || "General Context";
+  const analysis = topicData.analysis || {};
+  
+  // Intelligence fields from Agent
+  const executiveSummary = analysis.executive_summary || topicData.description || "No analysis available.";
+  const whatToKnow = analysis.what_you_need_to_know || [];
+  const keyTakeaways = analysis.key_takeaways || [];
+  const drivers = analysis.drivers_of_story || [];
+  const strategicImplications = analysis.strategic_implications || [];
+  const regionalImpactItems = analysis.regional_impact || [];
+  const confidenceScore = analysis.confidence_score || topicData.confidence_score || 0;
+
+  const category = topicData.category || "General";
   const views = formatViews(liveViewCount);
   const comments = liveCommentCount;
-  const updatedAt = topicData.updated_at ? formatDistanceToNow(new Date(topicData.updated_at), { addSuffix: true }) : "Recently updated";
+  const updatedAt = topicData.updated_at ? formatDistanceToNow(new Date(topicData.updated_at), { addSuffix: true }) : "Recently";
   const sourcesCount = topicData.source_count || topicData.article_count || 0;
-  
-  const bulletPoints = topicData.analysis?.key_points || topicData.bullets || [
-    "The ongoing story is developing and our systems are synthesizing new information as it arrives.",
-    "Real-time synthesis indicates varying framing from multiple sources.",
-    "Data aggregation is ongoing. Perspective weighting will self-adjust."
-  ];
 
   return (
     <div className="flyout-inner-wrapper">
@@ -950,9 +977,9 @@ function FlyoutInnerContent({
             </div>
             <div className="stat-flyout">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              {comments} comments
+              {Math.round(confidenceScore * 100)}% Confidence
             </div>
             <div className="stat-flyout">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -980,45 +1007,47 @@ function FlyoutInnerContent({
             
             <div className="intelligence-content-flyout">
               <p className="executive-summary-text">
-                {topicData.analysis?.executive_summary || topicData.description || brief}
+                {executiveSummary}
               </p>
 
-              {topicData.analysis?.what_you_need_to_know?.length > 0 && (
+              {whatToKnow.length > 0 && (
                 <>
                   <h3>What You Need to Know</h3>
                   <ul className="knowledge-list-flyout">
-                    {topicData.analysis.what_you_need_to_know.map((item: string, i: number) => (
+                    {whatToKnow.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
                 </>
               )}
 
-              <div className="key-takeaway-flyout">
-                <div className="takeaway-label-flyout">Key Takeaways</div>
-                <ul className="takeaway-list-flyout">
-                   {(topicData.analysis?.key_takeaways || [bulletPoints[0]]).map((item: string, i: number) => (
-                     <li key={i} className="takeaway-text-flyout">{item}</li>
-                   ))}
-                </ul>
-              </div>
+              {keyTakeaways.length > 0 && (
+                <div className="key-takeaway-flyout">
+                  <div className="takeaway-label-flyout">Key Takeaways</div>
+                  <ul className="takeaway-list-flyout">
+                    {keyTakeaways.map((item: string, i: number) => (
+                      <li key={i} className="takeaway-text-flyout">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              <h3>What Is Driving The Story?</h3>
-              <ul className="drivers-list-flyout">
-                {topicData.analysis?.drivers_of_story?.length > 0
-                  ? topicData.analysis.drivers_of_story.map((bp: string, i: number) => (
-                      <li key={i}>{bp}</li>
-                    ))
-                  : bulletPoints.length > 1 ? bulletPoints.slice(1).map((bp: string, i: number) => (
-                      <li key={i}>{bp}</li>
-                    )) : <li><strong>Core Dynamics:</strong> Analysis relies heavily on macroeconomic fundamentals underlying recent reports.</li>}
-              </ul>
+              {drivers.length > 0 && (
+                <>
+                  <h3>What Is Driving The Story?</h3>
+                  <ul className="drivers-list-flyout">
+                    {drivers.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
 
-              {topicData.analysis?.strategic_implications?.length > 0 && (
+              {strategicImplications.length > 0 && (
                 <div className="strategic-section-flyout">
                   <h3>Strategic Implications</h3>
                   <ul className="implications-list-flyout">
-                    {topicData.analysis.strategic_implications.map((item: string, i: number) => (
+                    {strategicImplications.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -1026,36 +1055,46 @@ function FlyoutInnerContent({
               )}
 
               {/* SENTIMENT & FRAMING FALLBACKS */}
-              {(topicData.analysis?.sentiment_summary || topicData.analysis?.framing_overview) && (
-                <div className="sentiment-fallback-section-flyout" style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                   {topicData.analysis?.sentiment_summary && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <h3 style={{ fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '0.4rem' }}>Overall Sentiment</h3>
-                      <p style={{ fontSize: '1.0rem', lineHeight: '1.6' }}>{topicData.analysis.sentiment_summary}</p>
-                    </div>
-                  )}
-                  {topicData.analysis?.framing_overview && (
-                    <div>
-                      <h3 style={{ fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '0.4rem' }}>Framing Overview</h3>
-                      <p style={{ fontSize: '1.0rem', lineHeight: '1.6' }}>{topicData.analysis.framing_overview}</p>
-                    </div>
-                  )}
+              {(analysis.sentiment_summary || analysis.framing_overview) && (
+                <div style={{ marginTop: '2rem' }}>
+                  <div className="section-label-flyout">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    Sentiment & Framing Analysis
+                  </div>
+                  <div className="intelligence-content-flyout">
+                    {analysis.sentiment_summary && (
+                      <div style={{ marginBottom: '1.5rem', marginTop: '1rem' }}>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>Overall Sentiment</h3>
+                        <p>{analysis.sentiment_summary}</p>
+                      </div>
+                    )}
+                    {analysis.framing_overview && (
+                      <div>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>Framing & Narratives</h3>
+                        <p>{analysis.framing_overview}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </section>
-          
-          {/* PILLAR 3: PERSPECTIVE MAP - Moved here for Mobile Simplification */}
-          {(topicData.source_perspectives && topicData.source_perspectives.length > 0) && (
-            <section className="perspective-deep-flyout">
-              <div className="section-label-flyout" style={{ color: "var(--accent)" }}>
+
+          {/* PILLAR 3: PERSPECTIVE MAP */}
+          <section className="perspective-deep-flyout">
+            <div className="section-label-flyout" style={{ color: "var(--accent)" }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 How Different Sources Frame This
-              </div>
-              <h2 className="section-title-flyout">Source Framing Analysis</h2>
-              <div className="perspective-grid">
+            </div>
+            <h2 className="section-title-flyout">Source Framing Analysis</h2>
+            
+            {/* The Bar Chart requested */}
+            {topicData.source_perspectives && topicData.source_perspectives.length > 0 && (
+              <div className="perspective-grid" style={{ marginBottom: '40px' }}>
                 {topicData.source_perspectives.map((p: any, i: number) => {
                   const score = parseFloat(String(p.sentiment_percentage).replace("%", "").replace("+", "")) || 0;
                   return (
@@ -1063,42 +1102,115 @@ function FlyoutInnerContent({
                       <div className="perspective-source" style={{ color: "#fff" }}>{p.source_name || p.frame_label}</div>
                       <div className="perspective-bar">
                         <div
-                          className={`perspective-fill ${p.sentiment}`}
+                          className={`perspective-fill ${p.sentiment === 'positive' ? 'positive' : p.sentiment === 'negative' ? 'negative' : 'neutral'}`}
                           style={{ width: `${Math.abs(score)}%` }}
                         ></div>
                       </div>
                       <div className="perspective-score" style={{ color: "#888", minWidth: "45px", textAlign: "right" }}>
-                        {score > 0 ? "+" : ""}
-                        {score}%
+                        {score > 0 ? "+" : ""}{score}%
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </section>
-          )}
+            )}
 
-          {/* PILLAR 4: REGIONAL IMPACT - Moved here for Mobile Simplification */}
-          {(topicData.regional_impacts && topicData.regional_impacts.length > 0) && (
-            <section className="impact-deep-flyout">
-              <div className="section-label-flyout" style={{ color: "var(--accent-warm)" }}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Impact Analysis
-              </div>
-              <h2 className="section-title-flyout">Geographic & Sector Influence</h2>
-              <div className="impact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
-                {topicData.regional_impacts.map((item: any, i: number) => (
-                  <div key={i} className="impact-item" style={{ background: "rgba(255,255,255,0.03)", padding: "16px", borderRadius: "8px" }}>
-                    <div className="impact-icon" style={{ fontSize: "1.5rem", marginBottom: "8px" }}>{item.icon || "📊"}</div>
-                    <div className="impact-title" style={{ fontSize: "0.8rem", color: "#888", marginBottom: "4px" }}>{item.title}</div>
-                    <div className="impact-value" style={{ fontSize: "1rem", color: "#fff", fontWeight: 700 }}>{item.value}</div>
+            <div className="perspective-groups-flyout">
+              {topicData.source_perspectives && topicData.source_perspectives.length > 0 ? topicData.source_perspectives.map((p: any, i: number) => {
+                let s = p.sentiment === "positive" ? "positive" : p.sentiment === "negative" ? "negative" : "neutral";
+                return (
+                  <div key={i} className={`perspective-group-flyout ${s}`}>
+                    <div className="group-header-flyout">
+                      <div className="group-name-flyout">{p.frame_label}</div>
+                      <div className={`sentiment-badge-flyout ${s}`}>{p.sentiment_percentage || p.sentiment}</div>
+                    </div>
+                    <div className="group-summary-flyout">
+                      {p.key_narrative}
+                    </div>
+                    {p.source_name && (
+                      <div className="group-quote-flyout">
+                        "Perspective synthesis extracted from current intelligence monitoring."
+                        <span className="quote-source-flyout">— {p.source_name}</span>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                )
+              }) : (
+                <div className="perspective-group-flyout neutral">
+                  <div className="group-header-flyout">
+                    <div className="group-name-flyout">General Media Overview</div>
+                    <div className="sentiment-badge-flyout neutral">Neutral</div>
+                  </div>
+                  <div className="group-summary-flyout">
+                    Aggregated perspective of the developing story from synthesized sources.
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* PILLAR 4: IMPACT ANALYSIS */}
+          <section className="impact-deep-flyout">
+            <div className="section-label-flyout">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Impact Analysis
+            </div>
+            <h2 className="section-title-flyout">What This Means for Nigeria & West Africa</h2>
+
+            <div className="impact-categories-flyout">
+              {regionalImpactItems.length > 0 ? (
+                regionalImpactItems.map((item: string, idx: number) => (
+                  <div key={idx} className="impact-category-flyout">
+                    <div className="impact-cat-header-flyout">
+                      <div className="impact-icon-flyout">🌍</div>
+                      <div className="impact-cat-title-flyout">Regional Development</div>
+                    </div>
+                    <div className="impact-details-flyout">
+                      <div className="impact-item-flyout">
+                        <div className="impact-item-value-flyout">
+                          {item}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : topicData.regional_impacts && topicData.regional_impacts.length > 0 ? (
+                topicData.regional_impacts.map((imp: any, idx: number) => (
+                  <div key={idx} className="impact-category-flyout">
+                    <div className="impact-cat-header-flyout">
+                      <div className="impact-icon-flyout">{imp.icon || "🌍"}</div>
+                      <div className="impact-cat-title-flyout">{imp.impact_category || imp.title}</div>
+                    </div>
+                    <div className="impact-details-flyout">
+                      <div className="impact-item-flyout">
+                        <div className="impact-item-label-flyout">{imp.title}</div>
+                        <div className="impact-item-value-flyout">
+                          {imp.context || imp.value}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="impact-category-flyout">
+                  <div className="impact-cat-header-flyout">
+                    <div className="impact-icon-flyout">📊</div>
+                    <div className="impact-cat-title-flyout">General Impact</div>
+                  </div>
+                  <div className="impact-details-flyout">
+                    <div className="impact-item-flyout">
+                      <div className="impact-item-label-flyout">Overview</div>
+                      <div className="impact-item-value-flyout">
+                        Current coverage maintains standard tracking vectors until deep analysis algorithms finalize.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* PILLAR 1: SOURCE ARTICLES */}
           <section className="sources-section-flyout">
@@ -1113,7 +1225,7 @@ function FlyoutInnerContent({
             <div className="source-articles-flyout">
               {topicData.articles && topicData.articles.map((art: any, i: number) => {
                 const colors = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6"];
-                const initials = art.source_name ? art.source_name.substring(0,2).toUpperCase() : "GN";
+                const initials = art.source_name ? art.source_name.substring(0, 2).toUpperCase() : "GN";
                 const bg = colors[i % colors.length];
                 
                 return (
@@ -1194,7 +1306,7 @@ function FlyoutInnerContent({
                            <span className="comment-author-flyout">{authorName}</span>
                            <span className="comment-role-flyout">Reader</span>
                          </div>
-                         <div className="comment-time-flyout">{c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : "just now"}</div>
+                         <div className="comment-time-flyout">{c.created_at ? formatDistanceToNow(parseISO(c.created_at), { addSuffix: true }) : "just now"}</div>
                        </div>
                      </div>
                      <div className="comment-text-flyout">
@@ -1234,18 +1346,17 @@ function FlyoutInnerContent({
             <div className="insight-item-flyout">
               <div className="insight-label-flyout">Sentiment Tracker</div>
               <div className="insight-value-flyout">
-                {topicData.analysis?.sentiment_label || (topicData.perspectives?.[0]?.sentiment ? (topicData.perspectives[0].sentiment.charAt(0).toUpperCase() + topicData.perspectives[0].sentiment.slice(1)) : "Stable")}
+                {analysis.sentiment_label || (topicData.perspectives?.[0]?.sentiment ? (topicData.perspectives[0].sentiment.charAt(0).toUpperCase() + topicData.perspectives[0].sentiment.slice(1)) : "Stable")}
               </div>
-              <div className="insight-text-flyout">{topicData.analysis?.sentiment_summary || "Analysis vector normalized"}</div>
+              <div className="insight-text-flyout">{analysis.sentiment_summary || "Analysis vector normalized"}</div>
             </div>
 
             <div className="insight-item-flyout">
               <div className="insight-label-flyout">Expert Consensus</div>
-              <div className="insight-value-flyout">{topicData.analysis?.consensus_label || "Synthesizing..."}</div>
-              <div className="insight-text-flyout">{topicData.analysis?.framing_overview || "Awaiting further market data"}</div>
+              <div className="insight-value-flyout">{analysis.consensus_label || "Synthesizing..."}</div>
+              <div className="insight-text-flyout">{analysis.framing_overview || "Awaiting further market data"}</div>
             </div>
           </div>
-
         </aside>
       </main>
     </div>

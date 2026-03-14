@@ -2,6 +2,7 @@ from sqlalchemy import String, Boolean, Integer, Enum
 from sqlalchemy.orm import Mapped, mapped_column
 from typing import Optional
 import enum
+import datetime
 
 from app.models.base import Base, TimestampMixin
 
@@ -19,6 +20,9 @@ class AIProvider(Base, TimestampMixin):
     model: Mapped[str] = mapped_column(String)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     priority: Mapped[int] = mapped_column(Integer, default=0)
+    daily_budget_usd: Mapped[float] = mapped_column(default=5.0)
+    status: Mapped[Optional[str]] = mapped_column(String, nullable=True, default="unknown")
+    last_checked: Mapped[Optional[datetime.datetime]] = mapped_column(nullable=True)
 
 class FeatureFlag(Base, TimestampMixin):
     __tablename__ = "feature_flags"

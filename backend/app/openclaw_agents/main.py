@@ -37,10 +37,10 @@ async def process_next_topic(session: AsyncSessionLocal) -> bool:
         topic_id = result.scalar_one_or_none()
         
         if not topic_id:
-            logger.info("💤 No pending topics found in database.")
+            logger.info("No pending topics found in database.")
             return False
             
-        logger.info(f"🚀 OpenClaw Agent picking up topic {topic_id} for enrichment...")
+        logger.info(f"OpenClaw Agent picking up topic {topic_id} for enrichment...")
         
         # Use the centralized job for full enrichment
         job = GenerateTopicAnalysisJob(session)
@@ -54,12 +54,21 @@ async def process_next_topic(session: AsyncSessionLocal) -> bool:
 
 async def worker_loop():
     """Continuously poll the database for new topics."""
-    logger.info("🚀 Starting OpenClaw Agent Service worker loop...")
+    logger.info("Starting OpenClaw Agent Service worker loop...")
     
     while True:
         try:
-            # Get a fresh DB session from the pool
             async with AsyncSessionLocal() as session:
+                # Check for pause flag
+                from app.models.settings import FeatureFlag
+                res = await session.execute(select(FeatureFlag).where(FeatureFlag.key == "agent_intelligence_paused"))
+                flag = res.scalar_one_or_none()
+                if flag and flag.enabled:
+                    logger.debug("Intelligence Agent is paused.")
+                    processed_something = False
+                    await asyncio.sleep(15)
+                    continue
+
                 processed_something = await process_next_topic(session)
                 
             # If we found nothing, back off slightly to reduce DB polling spam
@@ -77,4 +86,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(worker_loop())
     except KeyboardInterrupt:
-        logger.info("🛑 Shutting down OpenClaw Agent Service.")
+        logger.info("Shutting down OpenClaw Agent Service.")

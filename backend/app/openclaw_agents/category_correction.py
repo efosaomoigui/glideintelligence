@@ -42,7 +42,7 @@ async def process_category_correction(session: AsyncSession) -> bool:
         if not topic:
             return False
             
-        logger.info(f"🏷️ Locked Topic {topic.id} for Category Correction: '{topic.title}'")
+        logger.info(f"Locked Topic {topic.id} for Category Correction: '{topic.title}'")
         
         # Create Job record
         job_id = await create_job_record(session, "CATEGORY_AGENT", payload={"topic_id": topic.id, "title": topic.title})
@@ -100,7 +100,7 @@ Respond with ONLY the category name in lowercase. No explanation, no punctuation
             topic.category = suggested_category
             topic.analysis_status = 'categorized'
             
-            logger.info(f"✅ Topic {topic.id} categorized: '{old_category}' -> '{suggested_category}'")
+            logger.info(f"Topic {topic.id} categorized: '{old_category}' -> '{suggested_category}'")
             await update_job_status(session, job_id, "SUCCESS", result={"topic_id": topic.id, "old_category": old_category, "new_category": suggested_category})
             
         except Exception as ai_err:
@@ -125,11 +125,20 @@ Respond with ONLY the category name in lowercase. No explanation, no punctuation
 
 async def worker_loop():
     """Continuously poll the database for verified topics."""
-    logger.info("🏷️ Starting Category Correction Agent worker loop...")
+    logger.info("Starting Category Correction Agent worker loop...")
     
     while True:
         try:
             async with AsyncSessionLocal() as session:
+                # Check for pause flag
+                from app.models.settings import FeatureFlag
+                res = await session.execute(select(FeatureFlag).where(FeatureFlag.key == "agent_category_paused"))
+                flag = res.scalar_one_or_none()
+                if flag and flag.enabled:
+                    logger.debug("Category Correction Agent is paused.")
+                    await asyncio.sleep(15)
+                    continue
+
                 processed_something = await process_category_correction(session)
                 
             if not processed_something:

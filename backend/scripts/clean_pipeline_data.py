@@ -57,7 +57,9 @@ import argparse
 from app.database import AsyncSessionLocal
 from app.services.maintenance_service import clean_pipeline_data
 
-def confirm_deletion() -> bool:
+def confirm_deletion(bypass: bool = False) -> bool:
+    if bypass:
+        return True
     print("\n⚠️  WARNING: This will permanently delete ALL pipeline data from the database.")
     print("    Config tables (sources, categories, users, etc.) will NOT be affected.")
     print()
@@ -65,10 +67,10 @@ def confirm_deletion() -> bool:
     return answer == "yes"
 
 
-async def run_cleanup(dry_run: bool = False):
+async def run_cleanup(dry_run: bool = False, force: bool = False):
     async with AsyncSessionLocal() as db:
         try:
-            if not dry_run and not confirm_deletion():
+            if not dry_run and not confirm_deletion(force):
                 print("\n❌ Aborted — no data was deleted.")
                 return
 
@@ -98,9 +100,9 @@ async def run_cleanup(dry_run: bool = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Clean AI pipeline data tables.")
     parser.add_argument(
-        "--dry-run",
+        "--yes",
         action="store_true",
-        help="Show what would be deleted without actually deleting anything.",
+        help="Bypass confirmation prompt.",
     )
     args = parser.parse_args()
-    asyncio.run(run_cleanup(dry_run=args.dry_run))
+    asyncio.run(run_cleanup(dry_run=args.dry_run, force=args.yes))

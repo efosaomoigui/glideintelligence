@@ -15,8 +15,8 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - OLLAMA_BASE_URL=http://ollama:11434
-    dns:
-      - 8.8.8.8
+      - RUN_INITIALIZATION=true
+    restart: always
     depends_on:
       - db
       - redis
@@ -38,6 +38,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: always
 
   celery-beat:
     build: .
@@ -54,6 +55,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: always
 
   openclaw_agents:
     build: .
@@ -65,6 +67,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
+    restart: always
 
   completeness_agent:
     build: .
@@ -76,6 +79,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
+    restart: always
 
   category_correction_agent:
     build: .
@@ -87,6 +91,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
+    restart: always
 
   db:
     image: pgvector/pgvector:pg16

@@ -37,6 +37,7 @@ interface TopicCardProps {
     isPremium?: boolean;
     intelligenceLevel?: string;
     analysisStatus?: string;
+    slug?: string;
   };
 }
 
@@ -74,7 +75,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
 
   const handleOpenDetail = (e: React.MouseEvent) => {
     e.preventDefault();
-    const slug = topic.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const slug = topic.slug || topic.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     window.dispatchEvent(new CustomEvent("open-flyout", {
       detail: {
         id: topic.id,
@@ -156,7 +157,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          Glide Brief
+          GLIDE brief
         </div>
         <p className="brief-text">{topic.brief}</p>
       </div>
@@ -183,7 +184,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
         <div className="perspective-grid">
           {topic.perspectives.map((p, i) => (
             <div key={i} className="perspective-item">
-              <div className="perspective-source">{p.source}</div>
+              <div className="perspective-source" style={{ color: "var(--ink)", fontWeight: 700 }}>{p.source}</div>
               <div className="perspective-bar">
                 <div
                   className={`perspective-fill ${p.sentiment}`}

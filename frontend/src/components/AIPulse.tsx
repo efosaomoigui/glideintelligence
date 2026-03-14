@@ -7,8 +7,10 @@ interface SidebarPulse {
   sentiment_score: number;
   sentiment_text: string;
   trending_topic: string;
+  trending_id?: number | string;
   trending_text: string;
   regional_focus: string;
+  regional_id?: number | string;
   regional_text: string;
 }
 
@@ -56,6 +58,22 @@ export default function AIPulse() {
     regional_text: "West African bloc tensions rise as Mali, Burkina Faso, Niger formalize exit. Nigeria's mediator role questioned.",
   };
 
+  const truncate = (text: string, maxWords: number = 30) => {
+    if (!text) return "";
+    const words = text.split(/\s+/);
+    if (words.length <= maxWords) return text;
+    return words.slice(0, maxWords).join(" ") + "...";
+  };
+
+  const handleOpenFlyout = (id?: number | string) => {
+    if (!id) return;
+    window.dispatchEvent(
+      new CustomEvent("open-flyout", {
+        detail: { id: String(id) },
+      })
+    );
+  };
+
   return (
     <div className="ai-pulse">
       <div className="pulse-header">
@@ -78,11 +96,21 @@ export default function AIPulse() {
       </div>
 
       <div className="pulse-metric">
-        <div className="metric-label">Trending Context</div>
         <div className="metric-value" style={{ fontSize: "1.1rem" }}>
           {pulse.trending_topic}
         </div>
-        <div className="metric-text">{pulse.trending_text}</div>
+        <div className="metric-text">
+          {truncate(pulse.trending_text)}
+          {pulse.trending_id && (
+            <button 
+              onClick={() => handleOpenFlyout(pulse.trending_id)}
+              className="read-more-pulse"
+              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}
+            >
+              Read more analysis
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="pulse-metric">
@@ -90,7 +118,18 @@ export default function AIPulse() {
         <div className="metric-value" style={{ fontSize: "1.1rem" }}>
           {pulse.regional_focus}
         </div>
-        <div className="metric-text">{pulse.regional_text}</div>
+        <div className="metric-text">
+          {truncate(pulse.regional_text)}
+          {pulse.regional_id && (
+            <button 
+              onClick={() => handleOpenFlyout(pulse.regional_id)}
+              className="read-more-pulse"
+              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}
+            >
+              Read more analysis
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

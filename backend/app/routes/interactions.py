@@ -85,14 +85,26 @@ async def get_latest_comments(limit: int = 5, db: AsyncSession = Depends(get_db)
 
 @router.get("/polls", response_model=List[PollSchema])
 async def get_active_polls(db: AsyncSession = Depends(get_db)):
-    from sqlalchemy.orm import selectinload
+    from sqlalchemy.orm import selectinload, joinedload
+    from app.models.topic import Topic
+    
     result = await db.execute(
         select(Poll)
-        .options(selectinload(Poll.options))
+        .options(
+            selectinload(Poll.options),
+            joinedload(Poll.topic).load_only(Topic.title)
+        )
         .where(Poll.is_active == True)
         .order_by(Poll.total_votes.desc(), Poll.created_at.desc())
     )
-    return result.scalars().all()
+    polls = result.unique().scalars().all()
+    
+    # Manually populate topic_title for the schema
+    for p in polls:
+        if p.topic:
+            p.topic_title = p.topic.title
+            
+    return polls
 
 @router.get("/polls/topic/{topic_id}")
 async def get_topic_poll(

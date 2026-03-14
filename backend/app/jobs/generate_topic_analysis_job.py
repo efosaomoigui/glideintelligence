@@ -3,7 +3,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from app.models import (
     Topic, TopicAnalysis, TopicSentimentBreakdown, TopicArticle, 
-    RawArticle, AISummary
+    RawArticle, AISummary, Job
 )
 from app.models.interaction import Poll, PollOption, PollVote
 from app.models.intelligence import CategoryConfig, SourcePerspective, IntelligenceCard
@@ -15,7 +15,7 @@ from datetime import datetime
 import logging
 import os
 import asyncio
-from typing import Dict, List
+from typing import Dict, List, Optional
 from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,24 @@ class GenerateTopicAnalysisJob:
         self.use_optimized = os.getenv('USE_OPTIMIZED_PIPELINE', 'true').lower() == 'true'
         self.daily_budget = float(os.getenv('DAILY_BUDGET_USD', '5.0'))
 
-    async def execute(self, topic_id: int):
+    async def execute(self, topic_id: int, job_id: Optional[str] = None):
         """Execute analysis with enhanced features."""
+        
+        # If no job_id provided (standalone agent), create one for visibility in history
+        if not job_id:
+            job_id = f"ia-{topic_id}-{int(datetime.now().timestamp())}"
+            try:
+                new_job = Job(
+                    id=job_id,
+                    type="INTELLIGENCE_AGENT",
+                    status="STARTED",
+                    payload={"topic_id": topic_id},
+                    started_at=datetime.now()
+                )
+                self.db.add(new_job)
+                await self.db.commit()
+            except Exception as je:
+                logger.warning(f"Could not create job record: {je}")
         
         logger.info(f"Starting analysis for topic {topic_id} (optimized={self.use_optimized})...")
         
@@ -199,7 +215,20 @@ class GenerateTopicAnalysisJob:
                 topic.description = analysis_data['summary']
             
             # Step 10: Final commit
-            await self.db.commit()
+            # Update job record if it exists
+            if job_id:
+                try:
+                    q = select(Job).where(Job.id == job_id)
+                    res = await self.db.execute(q)
+                    job_rec = res.scalar_one_or_none()
+                    if job_rec:
+                        job_rec.status = "SUCCESS"
+                        job_rec.completed_at = datetime.now()
+                        job_rec.result = {"topic_id": topic_id, "status": "complete"}
+                        await self.db.commit()
+                except Exception as je:
+                    logger.warning(f"Could not update job record: {je}")
+
             logger.info(f"✅ Analysis completed for topic {topic_id}")
 
         except Exception as e:
@@ -223,6 +252,20 @@ class GenerateTopicAnalysisJob:
                     logger.info(f"Marked topic {topic_id} as 'analysis_failed' / 'pipeline_failed'")
             except Exception as e2:
                 logger.error(f"Failed to set error state: {e2}")
+            
+            # Update job record on failure
+            if job_id:
+                try:
+                    q = select(Job).where(Job.id == job_id)
+                    res = await self.db.execute(q)
+                    job_rec = res.scalar_one_or_none()
+                    if job_rec:
+                        job_rec.status = "FAILED"
+                        job_rec.completed_at = datetime.now()
+                        job_rec.error = safe_encode(str(e))
+                        await self.db.commit()
+                except Exception as je:
+                    logger.warning(f"Could not update job record on failure: {je}")
             
             raise e
     
@@ -346,6 +389,11 @@ class GenerateTopicAnalysisJob:
             if 'core_drivers' in analysis_result:
                 metadata_copy['core_drivers'] = [safe_encode(d) for d in analysis_result['core_drivers']]
             topic.metadata_ = metadata_copy
+
+        # Component 8: Premium TopicAnalysis Fields
+        await self._store_premium_analysis(topic_id, analysis_result)
+        await self.db.commit()
+        logger.info(f"✅ Premium analysis fields saved")
 
         await self.db.commit()
     
@@ -484,3 +532,42 @@ class GenerateTopicAnalysisJob:
                 display_order=idx
             )
             self.db.add(option)
+    async def _store_premium_analysis(self, topic_id: int, data: Dict):
+        """Store premium fields in TopicAnalysis."""
+        existing = await self.db.execute(
+            select(TopicAnalysis).where(TopicAnalysis.topic_id == topic_id)
+        )
+        analysis = existing.scalar_one_or_none()
+        
+        if not analysis:
+            analysis = TopicAnalysis(topic_id=topic_id)
+            self.db.add(analysis)
+            
+        # Map fields with encoding
+        if 'executive_summary' in data:
+            analysis.executive_summary = safe_encode(data['executive_summary'])
+        if 'what_you_need_to_know' in data:
+            analysis.what_you_need_to_know = [safe_encode(str(i)) for i in data['what_you_need_to_know']]
+        if 'key_takeaways' in data:
+            # Handle both string (from Intelligence Agent) and list (if applicable)
+            kt = data['key_takeaways']
+            if isinstance(kt, list):
+                analysis.key_takeaways = [safe_encode(str(i)) for i in kt]
+            else:
+                # Store as list of one or split? The model expects List[str] usually or Text. 
+                # Let's check model again. 
+                analysis.key_takeaways = [safe_encode(str(kt))]
+        if 'drivers_of_story' in data or 'core_drivers' in data:
+            val = data.get('drivers_of_story') or data.get('core_drivers', [])
+            analysis.drivers_of_story = [safe_encode(str(i)) for i in val]
+        if 'strategic_implications' in data:
+            analysis.strategic_implications = [safe_encode(str(i)) for i in data['strategic_implications']]
+        if 'regional_impact' in data:
+            # Note: handle both string and list
+            ri = data['regional_impact']
+            if isinstance(ri, list):
+                analysis.regional_impact = [safe_encode(str(i)) for i in ri]
+            else:
+                analysis.regional_impact = [safe_encode(str(ri))]
+        if 'confidence_score' in data:
+            analysis.confidence_score = float(data['confidence_score'] or 0.0)
