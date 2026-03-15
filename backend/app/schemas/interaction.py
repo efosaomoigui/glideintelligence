@@ -1,11 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from .user import UserBase
 
 class CommentBase(BaseModel):
     content: str
-    article_id: Optional[int] = None
     topic_id: Optional[int] = None
     parent_id: Optional[int] = None
 
@@ -16,10 +15,14 @@ class CommentSchema(CommentBase):
     id: int
     user_id: int
     created_at: datetime
+    upvote_count: int = 0
+    downvote_count: int = 0
+    reply_count: int = 0
+    is_featured: bool = False
+    moderation_status: str = "pending"
     user: Optional[UserBase] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PollVoteBase(BaseModel):
     poll_option_id: int
@@ -32,8 +35,7 @@ class PollVoteSchema(PollVoteBase):
     user_id: int
     poll_id: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PollOptionSchema(BaseModel):
     id: int
@@ -42,8 +44,7 @@ class PollOptionSchema(BaseModel):
     display_order: int
     vote_count: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PollBase(BaseModel):
     question: str
@@ -52,6 +53,8 @@ class PollBase(BaseModel):
 class PollCreate(PollBase):
     options: List[str]
     topic_id: Optional[int] = None
+    poll_type: Optional[str] = "single_choice"
+    closes_at: Optional[datetime] = None
 
 class PollSchema(PollBase):
     id: int
@@ -61,5 +64,4 @@ class PollSchema(PollBase):
     total_votes: int
     options: List[PollOptionSchema] = []
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
