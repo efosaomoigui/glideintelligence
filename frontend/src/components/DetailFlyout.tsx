@@ -1212,6 +1212,121 @@ function FlyoutInnerContent({
             </div>
           </section>
 
+          {/* PUBLIC REACTION SECTION */}
+          {topicData.social_reactions && topicData.social_reactions.length > 0 && (
+            <section className="social-reactions-section-flyout">
+              <div className="section-label-flyout" style={{ color: "#1d9bf0" }}>
+                <svg fill="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"></path>
+                </svg>
+                Social Media Reactions
+              </div>
+              <h2 className="section-title-flyout">Social Media Discussions</h2>
+              
+              <div className="social-reactions-grid-flyout" style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", 
+                gap: "16px",
+                marginTop: "20px"
+              }}>
+                {topicData.social_reactions.map((reaction: any, idx: number) => (
+                  <a 
+                    key={idx} 
+                    href={reaction.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="social-reaction-card"
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "12px",
+                      padding: "16px",
+                      textDecoration: "none",
+                      color: "inherit",
+                      transition: "all 0.2s",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ 
+                          width: "32px", 
+                          height: "32px", 
+                          borderRadius: "50%", 
+                          background: "rgba(255,255,255,0.1)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          color: "#fff"
+                        }}>
+                          {reaction.author.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#fff" }}>{reaction.author}</div>
+                          <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>
+                            {reaction.published_at ? formatDistanceToNow(new Date(reaction.published_at), { addSuffix: true }) : "Recently"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ color: reaction.platform === 'youtube' ? '#ff0000' : '#1d9bf0' }}>
+                        {reaction.platform === 'youtube' ? (
+                          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"></path>
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div style={{ 
+                      fontSize: "0.9rem", 
+                      lineHeight: 1.5, 
+                      color: "rgba(255,255,255,0.8)",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden"
+                    }}>
+                      {reaction.content_excerpt}
+                    </div>
+                    
+                    {reaction.engagement_score && (
+                      <div style={{ 
+                        marginTop: "auto", 
+                        fontSize: "0.8rem", 
+                        fontWeight: 600, 
+                        color: "rgba(255,255,255,0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path d="M14 10h4.757c1.27 0 1.908 1.537 1.012 2.433l-7 7a1.431 1.431 0 01-2.024 0l-7-7C2.85 11.537 3.487 10 4.757 10H9.5V4h4.5v6z"></path>
+                        </svg>
+                        {reaction.engagement_score}
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* PILLAR 1: SOURCE ARTICLES */}
           <section className="sources-section-flyout">
             <div className="section-label-flyout">
@@ -1366,14 +1481,14 @@ function FlyoutInnerContent({
 function InfoFlyoutContent({ type }: { type: string }) {
   const contentMap: Record<string, { title: string; badge: string; content: React.ReactNode }> = {
     about: {
-      title: "About Gl Intel",
-      badge: "Company",
+      title: "About PAPERLY.",
+      badge: "Portal",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>Gl Intel is a next-generation news intelligence platform designed for decision-makers, analysts, and informed citizens in Nigeria and West Africa.</p>
+          <p>PAPERLY. is a next-generation news intelligence platform designed for decision-makers, analysts, and informed citizens in Nigeria and West Africa.</p>
           <p>We believe the problem today isn&apos;t a lack of information, but an abundance of noise. Our mission is to transform fragmented news reports into synthesized, actionable intelligence using advanced AI and rigorous editorial oversight.</p>
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Our Approach</h3>
-          <p>Unlike traditional news aggregators, Gl Intel uses proprietary AI pipelines to extract key facts, analyze sentiment variations across multiple sources, and map regional impacts for every major story.</p>
+          <p>Unlike traditional news aggregators, PAPERLY. uses proprietary AI pipelines to extract key facts, analyze sentiment variations across multiple sources, and map regional impacts for every major story.</p>
         </div>
       ),
     },
@@ -1382,23 +1497,23 @@ function InfoFlyoutContent({ type }: { type: string }) {
       badge: "Technology",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>Our intelligence engine operates in four distinct phases to ensure clarity and accuracy:</p>
+          <p>Our intelligence engine operates in four distinct phases to ensure maximum clarity and fact-based reporting:</p>
           <ul style={{ listStyle: "none", padding: 0, display: "grid", gap: "24px" }}>
             <li>
-              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>1. Aggregation</strong>
-              We monitor hundreds of verified local and international sources in real-time.
+              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>1. Multi-Source Aggregation</strong>
+              We monitor hundreds of verified local and international news outlets, regulatory portals, and official data sources in real-time.
             </li>
             <li>
-              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>2. Extraction</strong>
-              AI identifies entities, claims, and data points, stripping away sensationalism.
+              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>2. Entity & Claim Extraction</strong>
+              Our AI extracts key facts, entities, and data points, stripping away sensationalist language to focus on core developments.
             </li>
             <li>
-              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>3. Synthesis</strong>
-              Disparate reports are merged into a single &quot;Intelligence Brief&quot; that highlights consensus and conflict.
+              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>3. Perspective Synthesis</strong>
+              Disparate reports are merged into a single &quot;Intelligence Brief&quot; that identifies areas of consensus and highlights conflicting narratives.
             </li>
             <li>
-              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>4. Verification</strong>
-              Our system checks facts across sources and flags developing stories for human editorial review.
+              <strong style={{ color: "var(--accent)", display: "block", marginBottom: "4px" }}>4. Impact & Reaction Mapping</strong>
+              Final analysis layers in regional implications for Nigeria/West Africa and correlates social media sentiment on X and YouTube.
             </li>
           </ul>
         </div>
@@ -1413,20 +1528,20 @@ function InfoFlyoutContent({ type }: { type: string }) {
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>AI Assistance Disclosure</h3>
           <p>Every &quot;Summary&quot; and &quot;Impact Analysis&quot; on this platform is generated by AI models. These models are strictly constrained by the source material provided in the &quot;Source Perspectives&quot; section.</p>
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Bias Mitigation</h3>
-          <p>We deliberately include sources with varying political and economic leanings to ensure the AI-synthesized sentiment breakdown reflects the true breadth of public discourse.</p>
+          <p>We deliberately include sources with varying political and economic leanings to ensure the AI-synthesized sentiment breakdown reflects the true breadth of public discourse. Our algorithms are continuously refined to minimize inherent biases and promote factual neutrality.</p>
         </div>
       ),
     },
     contact: {
-      title: "Contact Us",
+      title: "Contact PAPERLY.",
       badge: "Support",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>Questions, feedback, or enterprise inquiries? We&apos;d love to hear from you.</p>
+          <p>Questions, partnership inquiries, or feedback? Reach out to our intelligence team.</p>
           <div style={{ background: "rgba(255,255,255,0.05)", padding: "32px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
             <div style={{ marginBottom: "24px" }}>
-              <strong style={{ display: "block", fontSize: "0.7rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>General Inquiries</strong>
-              <span style={{ fontSize: "1.2rem", fontWeight: 600 }}>intel@paperly.online</span>
+              <strong style={{ display: "block", fontSize: "0.7rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Intelligence Desk</strong>
+              <span style={{ fontSize: "1.2rem", fontWeight: 600 }}>desk@paperly.online</span>
             </div>
             <div>
               <strong style={{ display: "block", fontSize: "0.7rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Location</strong>
@@ -1477,11 +1592,11 @@ function InfoFlyoutContent({ type }: { type: string }) {
       badge: "Legal",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>By using Gl Intel, you agree to the following conditions:</p>
+          <p>By using PAPERLY., you agree to the following conditions:</p>
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Acceptable Use</h3>
           <p>Automated scraping of our synthesized intelligence is strictly prohibited without a license. Content is for personal or internal professional use.</p>
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Intellectual Property</h3>
-          <p>The synthesis and regional impact mapping are the intellectual property of Gl Intel. Original news headlines belong to their respective publishers.</p>
+          <p>The synthesis and regional impact mapping are the intellectual property of PAPERLY.. Original news headlines belong to their respective publishers.</p>
         </div>
       ),
     },
@@ -1490,11 +1605,13 @@ function InfoFlyoutContent({ type }: { type: string }) {
       badge: "Standards",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>Our editorial process is defined by two principles: **Objectivity** and **Synthesized Clarity**.</p>
-          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Neutrality</h3>
-          <p>We do not take editorial stances. We report on the landscape of public discourse by highlighting conflicting viewpoints across sources.</p>
+          <p>PAPERLY. operates at the intersection of advanced computational analysis and rigorous journalism. Our standards ensure that every brief is objective, accurate, and actionable.</p>
+          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Objectivity & Neutrality</h3>
+          <p>We do not take editorial stances. Our systems are designed to map the entire spectrum of public and media discourse, presenting conflicting viewpoints with equal weight.</p>
+          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Synthesized Clarity</h3>
+          <p>Our priority is reducing noise. We prioritize factual data points over speculative commentary, ensuring that decision-makers get the &quot;signal&quot; they need.</p>
           <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Source Diversity</h3>
-          <p>Every Intelligence Brief is required to be synthesized from multiple verified independent sources to minimize single-outlet bias.</p>
+          <p>To prevent single-outlet bias, no topic is published without synthesis from at least three independent verified sources.</p>
         </div>
       ),
     },
@@ -1503,14 +1620,13 @@ function InfoFlyoutContent({ type }: { type: string }) {
       badge: "Whitelisting",
       content: (
         <div style={{ display: "grid", gap: "24px" }}>
-          <p>We only ingest data from verified, reputable news organizations and official regulatory portals.</p>
-          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Verification Tiers</h3>
-          <ul style={{ paddingLeft: "20px", color: "#ccc", display: "grid", gap: "8px" }}>
-            <li><strong>Tier 1:</strong> National dailies and international wire services.</li>
-            <li><strong>Tier 2:</strong> Specialized industry journals and financial reports.</li>
-            <li><strong>Tier 3:</strong> Official government press releases and gazettes.</li>
-          </ul>
-          <p>Social media content and unverified blogs are excluded from our intelligence engine to ensure data integrity.</p>
+          <p>PAPERLY. maintains a strict whitelist of vetted sources. Our engine does not ingest data from unverified blogs, social media posts (except for reaction tracking), or known misinformation outlets.</p>
+          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Tier 1: High Credibility</h3>
+          <p>National dailies with established editorial boards, international news agencies (Reuters, Bloomberg, AFP), and registered wire services.</p>
+          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Tier 2: Specialized Data</h3>
+          <p>Industry-specific journals (e.g., Oil & Gas Report), financial market reports, and established think-tank publications.</p>
+          <h3 style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px", marginTop: "10px" }}>Tier 3: Official Records</h3>
+          <p>Government gazettes, central bank circulars, regulatory filings (SEC, NGX), and official press releases from sovereign entities.</p>
         </div>
       ),
     },

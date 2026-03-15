@@ -55,6 +55,7 @@ class Topic(Base, TimestampMixin):
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="topic", cascade="all, delete-orphan")
     polls: Mapped[List["Poll"]] = relationship("Poll", back_populates="topic", cascade="all, delete-orphan")
     tags: Mapped[List["TopicTag"]] = relationship("TopicTag", back_populates="topic", cascade="all, delete-orphan")
+    social_reactions: Mapped[List["TopicSocialReaction"]] = relationship("TopicSocialReaction", back_populates="topic", cascade="all, delete-orphan")
 
 
 class TopicArticle(Base, TimestampMixin):
@@ -88,6 +89,7 @@ class TopicAnalysis(Base, TimestampMixin):
     strategic_implications: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
     regional_impact: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0)
+    social_keywords: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
     
     # Enrichment Fallbacks
     sentiment_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -167,3 +169,17 @@ class TopicVideo(Base, TimestampMixin):
     source_platform: Mapped[str] = mapped_column(String, default="youtube") # youtube, vimeo, etc.
     
     topic: Mapped["Topic"] = relationship("Topic", back_populates="videos")
+
+class TopicSocialReaction(Base, TimestampMixin):
+    __tablename__ = "topic_social_reactions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    topic_id: Mapped[int] = mapped_column(ForeignKey("topics.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(50), index=True) # x, youtube, reddit
+    author: Mapped[str] = mapped_column(String(255))
+    content_excerpt: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(String(512))
+    engagement_score: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) # "1.2K likes", "5M views"
+    published_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
+    topic: Mapped["Topic"] = relationship("Topic", back_populates="social_reactions")

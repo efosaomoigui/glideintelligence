@@ -39,6 +39,7 @@ interface TopicCardProps {
     analysisStatus?: string;
     slug?: string;
     seeMore?: boolean;
+    hasSocialReactions?: boolean;
   };
 }
 
@@ -168,6 +169,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
         <p className="brief-text">{topic.brief}</p>
       </div>
 
+
       {/* PILLAR 3: PERSPECTIVE MAP */}
       <div className="perspective-map desktop-only">
         <div className="perspective-label">
@@ -235,6 +237,28 @@ export default function TopicCard({ topic }: TopicCardProps) {
           ))}
         </div>
       </div>
+
+      {topic.hasSocialReactions && (
+        <div className="social-reaction-indicator" style={{ 
+          marginTop: "16px", 
+          marginBottom: "8px",
+          padding: "10px 14px", 
+          background: "rgba(var(--accent-rgb, 192,57,43), 0.08)", 
+          border: "1px solid rgba(var(--accent-rgb, 192,57,43), 0.15)", 
+          borderRadius: "8px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          fontSize: "0.9rem",
+          color: "var(--ink)"
+        }}>
+          <span style={{ fontSize: "1.4rem" }}>🗣</span>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px" }}>
+            <span style={{ fontWeight: 700 }}>Social Media Reactions</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--ink-mid)", fontWeight: 500 }}>(X & YouTube)</span>
+          </div>
+        </div>
+      )}
 
       <div className="topic-footer">
         <div className="source-count">

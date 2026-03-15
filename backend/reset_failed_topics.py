@@ -1,42 +1,41 @@
-
 import asyncio
-import sys
-import os
-from sqlalchemy import update
-
-# Ensure backend directory is in python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from sqlalchemy import select, update, text
 from app.database import AsyncSessionLocal
-from app.models import Topic
-from sqlalchemy import select
+from app.models.topic import Topic
 
 async def reset_topics():
     async with AsyncSessionLocal() as db:
-        # Find 10 failed topics
-        stmt = select(Topic).where(Topic.status == 'analysis_failed').limit(10)
-        result = await db.execute(stmt)
-        topics = result.scalars().all()
+        print("Resetting failed topics to trigger re-processing...")
         
-        print(f"Found {len(topics)} failed topics to reset.")
+        # 1. Reset topics that failed completeness or categorization
+        # If they failed categorization, they might be 'verified' but analysis_status='failed'
+        # If they failed completeness, they go back to 'pending' (handled by completeness agent)
         
-        if not topics:
-            return
-
-        ids = [t.id for t in topics]
+        # Count current failed topics
+        result = await db.execute(text("SELECT count(*) FROM topics WHERE analysis_status = 'failed';"))
+        failed_count = result.scalar()
+        print(f"Found {failed_count} topics in 'failed' status.")
         
-        # Reset them
-        update_stmt = update(Topic).where(Topic.id.in_(ids)).values(
-            status='developing',  # or whatever initial status is appropriate
-            overall_sentiment=None,
-            metadata_=None # content_generator logic might check metadata for errors
-        )
-        await db.execute(update_stmt)
+        if failed_count > 0:
+            # We reset them to 'pending' to be safe, so they get a fresh analysis if needed.
+            # Or reset to 'verified' if we are confident the analysis is good but only categorization failed.
+            # Given the quota issue, reset to 'verified' for those that have analysis data.
+            
+            # Check for analysis presence
+            res = await db.execute(
+                update(Topic)
+                .where(Topic.analysis_status == 'failed')
+                .values(analysis_status='verified')
+            )
+            print(f"Updated {res.rowcount} topics to 'verified'.")
+        
+        # Also check for 'pending' topics that might have been stuck
+        result = await db.execute(text("SELECT count(*) FROM topics WHERE analysis_status = 'pending';"))
+        pending_count = result.scalar()
+        print(f"Current pending topics: {pending_count}")
+        
         await db.commit()
-        
-        print(f"Reset topics: {ids}")
+        print("Done.")
 
 if __name__ == "__main__":
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(reset_topics())

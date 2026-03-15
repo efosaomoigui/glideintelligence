@@ -487,7 +487,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
                 <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
               </div>
               <p className="footer-tagline">
-                We don't publish news. We make sense of it. AI-powered intelligence platform for Nigeria & West Africa.
+                We don&apos;t publish news. We make sense of it. PAPERLY.-powered intelligence platform for Nigeria &amp; West Africa.
               </p>
             </div>
             <div>

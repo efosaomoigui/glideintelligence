@@ -19,6 +19,7 @@ class TopicAnalysisSchema(BaseModel):
     
     sentiment_summary: Optional[str] = None
     framing_overview: Optional[str] = None
+    social_keywords: Optional[List[str]] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,6 +84,16 @@ class IntelligenceCardSchema(BaseModel):
     is_positive: bool
     model_config = ConfigDict(from_attributes=True)
 
+class TopicSocialReactionSchema(BaseModel):
+    id: int
+    platform: str
+    author: str
+    content_excerpt: str
+    url: str
+    engagement_score: Optional[str] = None
+    published_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
 class TopicBase(BaseModel):
     title: str
     slug: str
@@ -114,6 +125,7 @@ class TopicTrendingSchema(TopicSchema):
     # These are populated from private attrs set in _enrich_topic_for_frontend
     regional_impacts: List[RegionalImpactSchema] = []
     regional_categories: List[RegionalCategorySchema] = []
+    social_reactions: List[TopicSocialReactionSchema] = []
     
     # Intelligence Indicators
     intelligence_level: str = "Standard"
@@ -163,7 +175,7 @@ class TopicTrendingSchema(TopicSchema):
                 data[attr] = val
 
         # Relationship-based fields: ONLY read if in obj_dict (meaning they were loaded or explicitly set)
-        for rel in ('analysis', 'articles', 'intelligence_card', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories'):
+        for rel in ('analysis', 'articles', 'intelligence_card', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories', 'social_reactions'):
             if rel in obj_dict:
                 val = getattr(values, rel, None)
                 if val is not None:
@@ -171,7 +183,7 @@ class TopicTrendingSchema(TopicSchema):
                     data[rel] = list(val) if isinstance(val, (list, tuple)) or hasattr(val, '__iter__') and not isinstance(val, (dict, str)) else val
             else:
                 # Default to empty/None for missing relationships to avoid 500s on transition objects
-                if rel in ('articles', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories'):
+                if rel in ('articles', 'trends', 'videos', 'sentiment_breakdown', 'regional_categories', 'social_reactions'):
                     data[rel] = []
                 else:
                     data[rel] = None

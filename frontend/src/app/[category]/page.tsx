@@ -127,7 +127,7 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     insights: [],
     trending: [],
     newsletterTitle: "Daily Politics Brief",
-    newsletterDesc: "Stay ahead of Nigeria's political developments with our PAPERLY.-curated morning brief.",
+    newsletterDesc: "Stay ahead of Nigeria&apos;s political developments with our PAPERLY.-curated morning brief.",
   },
   business: {
     name: "Business",

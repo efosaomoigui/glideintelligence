@@ -23,6 +23,7 @@ class NewsService:
             select(Topic)
             .options(
                  selectinload(Topic.analysis),
+                 selectinload(Topic.social_reactions),
                  selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
             )
             .where(Topic.is_trending == True)
@@ -40,6 +41,7 @@ class NewsService:
                 select(Topic)
                 .options(
                      selectinload(Topic.analysis),
+                     selectinload(Topic.social_reactions),
                      selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source)
                 )
              )
@@ -581,6 +583,7 @@ class NewsService:
         offset = (page - 1) * limit
         query = select(Topic).options(
              selectinload(Topic.analysis),
+             selectinload(Topic.social_reactions),
              selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source),
              selectinload(Topic.regional_categories)
         )
@@ -684,6 +687,7 @@ class NewsService:
             select(Topic)
             .options(
                 selectinload(Topic.analysis),
+                selectinload(Topic.social_reactions),
                 selectinload(Topic.sentiment_breakdown),
                 selectinload(Topic.source_perspectives),
                 selectinload(Topic.regional_impacts),

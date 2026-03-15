@@ -296,7 +296,7 @@ class AIContentGenerator:
                 result1 = json.loads(extracted1)
                 
                 # Basic validation for Stage 1
-                required_keys1 = ['sentiment_breakdown', 'source_perspectives', 'regional_impacts', 'regional_categories', 'verified_category', 'key_takeaways', 'core_drivers']
+                required_keys1 = ['sentiment_breakdown', 'source_perspectives', 'regional_impacts', 'regional_categories', 'verified_category', 'key_takeaways', 'core_drivers', 'social_media_keywords']
                 if all(k in result1 for k in required_keys1):
                     provider1 = provider
                     break
@@ -512,6 +512,9 @@ Provide exactly 1 concise key takeaway from the story (max 25 words).
 6. CORE DRIVERS
 List exactly 2-3 short bullet points (max 15 words each) explaining what is driving or causing this story.
 
+7. SOCIAL MEDIA KEYWORDS
+Generate 3–5 specific search keywords or phrases that can be used to find relevant public discussions on X and YouTube for this topic.
+
 ════════════════════════
 OUTPUT RULES
 ════════════════════════
@@ -521,14 +524,15 @@ Do not include explanations, comments, or markdown.
 ════════════════════════
 OUTPUT FORMAT
 ════════════════════════
-{{
+{
  "sentiment_breakdown": [],
  "source_perspectives": [],
  "regional_impacts": [],
  "regional_categories": [],
  "verified_category": "",
  "key_takeaways": "",
- "core_drivers": []
+ "core_drivers": [],
+ "social_media_keywords": []
 }}"""
         return safe_encode(prompt)
 
