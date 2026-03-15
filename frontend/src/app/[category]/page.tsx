@@ -10,6 +10,9 @@ import KeyTopics from "@/components/KeyTopics";
 import NewsletterCard from "@/components/NewsletterCard";
 import SiteFooter from "@/components/SiteFooter";
 import MobileHeader from "@/components/MobileHeader";
+import SidebarAdCard from "@/components/ads/SidebarAdCard";
+import GenericAd, { AdData } from "@/components/ads/GenericAd";
+import DynamicIntelligence from "@/components/DynamicIntelligence";
 
 // All API calls use relative /api/ — proxied by Next.js to localhost:8000
 
@@ -48,9 +51,9 @@ function adaptTopic(t: any) {
     title: t.title,
     slug: t.slug,
     category: t.category || t.badge || "General",
-    isDeveloping: t.is_trending || t.status === "developing",
+    isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
     updatedAt: t.updated_at_str || t.updatedAt || "Recently",
-    brief: truncateText(t.ai_brief || t.description || ""),
+    brief: truncateText(t.ai_brief || t.description || "", 350),
     perspectives: perspectives.length ? perspectives : [
       { source: "Nigerian Media", sentiment: "positive" as const, score: 75 },
       { source: "International", sentiment: "neutral" as const, score: 50 },
@@ -63,8 +66,11 @@ function adaptTopic(t: any) {
       { initials: "GL", color: "#e74c3c" },
     ],
     sourceCount: t.source_count || 1,
-    commentCount: t.comment_count ?? 0,
-    viewCount: t.view_count ?? 0,  // raw integer — TopicCard.fmt() formats for display
+    commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
+    viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0, 
+    isPremium: t.is_premium === true || t.intelligence_level === "Premium",
+    intelligenceLevel: t.intelligence_level || "Standard",
+    analysisStatus: t.analysis_status || "stable",
   };
 }
 
@@ -103,7 +109,7 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     insights: [],
     trending: [],
     newsletterTitle: "Daily Economy Brief",
-    newsletterDesc: "Get AI-synthesized economic intelligence in your inbox every morning at 6 AM WAT.",
+    newsletterDesc: "Get PAPERLY.-synthesized economic intelligence in your inbox every morning at 6 AM WAT.",
   },
   politics: {
     name: "Politics",
@@ -121,7 +127,7 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     insights: [],
     trending: [],
     newsletterTitle: "Daily Politics Brief",
-    newsletterDesc: "Stay ahead of Nigeria's political developments with our Glide-curated morning brief.",
+    newsletterDesc: "Stay ahead of Nigeria's political developments with our PAPERLY.-curated morning brief.",
   },
   business: {
     name: "Business",
@@ -218,7 +224,7 @@ const VERTICAL_CONFIGS: Record<string, VerticalConfig> = {
     icon: "⚽",
     color: "#e67e22",
     description:
-      "Glide-synthesized analysis of Nigerian and international sports — tracking football, local leagues, and athlete performances.",
+      "PAPERLY.-synthesized analysis of Nigerian and international sports — tracking football, local leagues, and athlete performances.",
     stats: [
       { value: "0", label: "Active Topics" },
       { value: "0", label: "Sources Tracked" },
@@ -262,52 +268,72 @@ export default function CategoryPage() {
   const [apiPulse, setApiPulse] = useState<any>(null);
   const [apiStats, setApiStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Pagination State
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [ads, setAds] = useState<AdData[]>([]);
+
+  const fetchAds = async () => {
+    try {
+      const res = await fetch(`/api/ads/placement/${categorySlug}_feed?limit=3`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setAds(data);
+        else {
+          // Fallback
+          const fRes = await fetch(`/api/ads/placement/vertical_feed?limit=3`);
+          if (fRes.ok) {
+            const fData = await fRes.json();
+            if (Array.isArray(fData)) setAds(fData);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Ad fetch failed", e);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/vertical/${encodeURIComponent(categorySlug)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.topics)) {
-          setApiTopics(data.topics);
+    setPage(1);
+    const loadInit = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/vertical/${encodeURIComponent(categorySlug)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.topics)) setApiTopics(data.topics);
+          if (data.pulse) setApiPulse(data.pulse);
+          if (data.stats) setApiStats(data.stats);
+          setHasMore(data.has_more || false);
         }
-        if (data.pulse) setApiPulse(data.pulse);
-        if (data.stats) setApiStats(data.stats);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch vertical data:", err);
-      })
-      .finally(() => setLoading(false));
+      } catch (e) {
+        console.error("Category fetch failed", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInit();
+    fetchAds();
   }, [categorySlug]);
 
   const loadMore = async () => {
-    if (!hasMore || loadingMore) return;
+    if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     const nextPage = page + 1;
     try {
       const res = await fetch(`/api/topics/trending?category=${encodeURIComponent(categorySlug)}&page=${nextPage}`);
-      if (!res.ok) throw new Error("Failed to load more topics");
-      const data = await res.json();
-      
-      if (data.items && data.items.length > 0) {
-        // Prevent duplicates
+      if (res.ok) {
+        const data = await res.json();
         setApiTopics(prev => {
           const existingIds = new Set(prev.map(t => t.id));
-          const newItems = data.items.filter((t: any) => !existingIds.has(t.id));
+          const newItems = (data.items || []).filter((t: any) => !existingIds.has(t.id));
           return [...prev, ...newItems];
         });
+        setHasMore(data.has_more || false);
         setPage(nextPage);
-        setHasMore(data.has_more ?? false);
-      } else {
-        setHasMore(false);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error("Load more failed", e);
     } finally {
       setLoadingMore(false);
     }
@@ -331,7 +357,6 @@ export default function CategoryPage() {
     ] : config.stats
   };
 
-  // Use live topics if fetched
   const displayTopics = apiTopics.map(adaptTopic);
 
   // Derive sidebar insights from pulse
@@ -413,8 +438,8 @@ export default function CategoryPage() {
       <header className="site-header">
         <div className="header-top">
           <div>
-            <Link href="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
-              Glide<span className="accent">Intelligence</span>
+            <Link href="/" className="logo" style={{ textDecoration: 'none', fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+              <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
             </Link>
             <div className="tagline">Making Sense of the News</div>
           </div>
@@ -473,9 +498,22 @@ export default function CategoryPage() {
               Loading intelligence report...
             </div>
           ) : displayTopics.length > 0 ? (
-            displayTopics.map((topic: any) => (
-              <TopicCard key={topic.id} topic={topic} />
-            ))
+            displayTopics.map((topic: any, index: number) => {
+              const showAd = ads.length > 0 && index > 0 && (index + 1) % 4 === 0;
+              const adIndex = (Math.floor((index + 1) / 4) - 1) % ads.length;
+              const currentAd = ads[adIndex];
+
+              return (
+                <React.Fragment key={topic.id}>
+                  <TopicCard topic={topic} />
+                  {showAd && currentAd && (
+                    <div className="feed-ad-wrapper px-4 md:px-0" style={{ margin: "20px 0" }}>
+                      <GenericAd ad={currentAd} />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })
           ) : (
             <div className="empty-state" style={{ 
               padding: "80px 40px", 
@@ -537,6 +575,10 @@ export default function CategoryPage() {
             title={`${effectiveConfig.name} Pulse`}
             color={effectiveConfig.color}
             items={sidebarInsights}
+          />
+          <SidebarAdCard 
+            placement={`${categorySlug}_sidebar`} 
+            fallbackPlacement="vertical_sidebar" 
           />
           {sidebarTrending.length > 0 && (
             <KeyTopics title="Trending This Week" topics={sidebarTrending} />

@@ -58,8 +58,8 @@ export default function MobileDrawer({ isOpen, onClose, activeCategory }: Mobile
       <div className={`mobile-drawer${isOpen ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Navigation Menu">
         {/* Drawer Header */}
         <div className="drawer-header">
-          <span className="drawer-logo">
-            Glide<span className="accent">Intelligence</span>
+          <span className="drawer-logo" style={{ fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+            <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
           </span>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close menu">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

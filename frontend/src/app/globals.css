@@ -355,12 +355,10 @@ img {
 .nav-link:hover {
   color: var(--accent);
   border-bottom-color: var(--accent);
-  background: rgba(192, 57, 43, 0.05);
 }
 .nav-link.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-  background: rgba(192, 57, 43, 0.1);
 }
 
 /* ─── HERO INTELLIGENCE ──────────────────────────────── */
@@ -1422,7 +1420,7 @@ img {
 }
 .key-topic:hover {
   border-color: var(--vertical-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 .key-topic-title {
   font-size: 0.88rem;

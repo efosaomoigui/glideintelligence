@@ -162,8 +162,8 @@ export default function DetailFlyout() {
       <div className="flyout-overlay" onClick={() => closeFlyout(true)}></div>
       <div className="flyout-panel dark-editorial">
         <div className="flyout-header">
-          <div className="logo flyout-logo-text">
-            Glide<span className="accent">Intelligence</span>
+          <div className="logo flyout-logo-text" style={{ fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+            <span style={{ color: "#fff" }}>PA</span><span className="accent">PERLY.</span>
           </div>
           <button className="flyout-close" onClick={() => closeFlyout(true)}>✕</button>
         </div>
@@ -180,7 +180,7 @@ export default function DetailFlyout() {
                <div className="flex items-center justify-center p-20 text-white/50 h-full">
                  <div className="animate-pulse flex flex-col items-center gap-4">
                    <div className="w-8 h-8 rounded-full border-t-2 border-accent animate-spin" />
-                   <span>Initializing Glide Intelligence Brief...</span>
+                   <span>Initializing PAPERLY. Brief...</span>
                  </div>
                </div>
             ) : !topicData ? (
@@ -482,7 +482,7 @@ function SubscribeFlyoutContent() {
           </div>
           <h1 className="topic-title-flyout">Get Started for Free</h1>
           <p style={{ fontSize: "1.15rem", color: "#999", lineHeight: 1.6, maxWidth: "560px" }}>
-            Join leading policymakers, executives, and analysts who rely on Gl Intel for synthesized clarity from daily noise.
+            Join leading policymakers, executives, and analysts who rely on PAPERLY. for synthesized clarity from daily noise.
           </p>
         </div>
       </section>
@@ -1002,7 +1002,7 @@ function FlyoutInnerContent({
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
               </svg>
-              Glide Intelligence Overview
+              PAPERLY. Overview
             </div>
             
             <div className="intelligence-content-flyout">
@@ -1426,7 +1426,7 @@ function InfoFlyoutContent({ type }: { type: string }) {
           <div style={{ background: "rgba(255,255,255,0.05)", padding: "32px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
             <div style={{ marginBottom: "24px" }}>
               <strong style={{ display: "block", fontSize: "0.7rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>General Inquiries</strong>
-              <span style={{ fontSize: "1.2rem", fontWeight: 600 }}>intel@glideintelligence.com</span>
+              <span style={{ fontSize: "1.2rem", fontWeight: 600 }}>intel@paperly.online</span>
             </div>
             <div>
               <strong style={{ display: "block", fontSize: "0.7rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Location</strong>

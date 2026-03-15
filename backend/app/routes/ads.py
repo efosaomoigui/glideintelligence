@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+from typing import Optional, List
 
 from app.database import get_db
 from app.services.ad_service import AdService
@@ -9,18 +9,18 @@ from app.schemas.ads import AdResponse
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
 
-@router.get("/placement/{placement_group}", response_model=Optional[AdResponse])
+@router.get("/placement/{placement_group}", response_model=List[AdResponse])
 async def get_ad_for_placement(
     placement_group: str,
+    limit: int = Query(1, description="Number of ads to return"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch an active ad for a specific placement group to display in the frontend."""
+    """Fetch active ads for a specific placement group to display in the frontend."""
     # placement_group could be 'homepage_feed', 'article_sidebar', etc.
     service = AdService(db)
-    ad = await service.get_ad_for_placement(placement_group)
+    ads = await service.get_ad_for_placement(placement_group, limit=limit)
     
-    # Return 200 OK with null instead of 404 to reduce noise in browser console
-    return ad
+    return ads
 
 @router.post("/render/{ad_id}")
 async def track_ad_view(

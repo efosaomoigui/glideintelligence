@@ -34,7 +34,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GlideIntelligence News | Making Sense of the News",
+  title: "PAPERLY. | Making Sense of the News",
   description:
     "AI-Powered Intelligence Platform for Nigeria & West Africa - We don't publish news. We make sense of it.",
 };

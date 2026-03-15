@@ -56,8 +56,8 @@ export default function KeyTopics({ title, topics: initialTopics }: KeyTopicsPro
             window.dispatchEvent(new CustomEvent("open-flyout", {
               detail: { id: topic.slug, slug: topic.slug } // Backend/Flyout logic will handle matching slug as id
             }));
-          }} className="key-topic open-detail" data-id={topic.slug}>
-            <div className="key-topic-title">{topic.title}</div>
+          }} className="key-topic open-detail" data-id={topic.slug} style={{ color: 'var(--ink)' }}>
+            <div className="key-topic-title" style={{ color: 'inherit' }}>{topic.title}</div>
             <div className="key-topic-meta">
               <span>{topic.views}</span>
               <span>•</span>

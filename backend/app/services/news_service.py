@@ -390,11 +390,11 @@ class NewsService:
             # Clean description
             raw_desc = topic.description or ""
             if not raw_desc or raw_desc.lower().startswith("topic driven by") or len(raw_desc) < 30:
-                topic.ai_brief = f"Intelligence analysis is being generated for this {(topic.category or 'developing').lower()} story. Key developments and their implications will appear shortly."
+                topic.ai_brief = f"Comprehensive intelligence analysis is currently being synthesized for this {(topic.category or 'developing').lower()} story. Our AI is aggregating perspectives from multiple global and local sources to provide a unified overview of the key drivers and potential strategic implications of this development."
                 topic.bullets = [
-                    "Coverage from multiple sources is being aggregated for this topic.",
-                    "Sentiment analysis and regional impact assessment are in progress.",
-                    "Full intelligence brief will be available once analysis is complete."
+                    "Synthesizing cross-source data to identify core narrative drivers.",
+                    "Evaluating regional impact and strategic implications for stakeholders.",
+                    "Processing real-time sentiment analysis and public engagement metrics."
                 ]
             else:
                 topic.ai_brief = raw_desc
@@ -460,8 +460,9 @@ class NewsService:
         }
         
         # 5b. Intelligence Level
-        # 'complete' means OpenClaw has finished premium enrichment
-        if getattr(topic, 'analysis_status', None) == 'complete' or has_premium:
+        # 'complete' or 'verified' means analysis is sufficiently enriched
+        status = getattr(topic, 'analysis_status', 'pending')
+        if status in ('complete', 'verified') or has_premium:
             topic.intelligence_level = "Premium"
             topic.is_premium = True
         else:
@@ -579,6 +580,7 @@ class NewsService:
 
         offset = (page - 1) * limit
         query = select(Topic).options(
+             selectinload(Topic.analysis),
              selectinload(Topic.article_associations).joinedload(TopicArticle.article).joinedload(RawArticle.source),
              selectinload(Topic.regional_categories)
         )

@@ -13,8 +13,8 @@ export default function SiteHeader() {
     <header className="site-header">
       <div className="header-top">
         <div>
-          <Link href="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Glide<span className="accent">Intelligence</span>
+          <Link href="/" className="logo" style={{ textDecoration: 'none', fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+            <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
           </Link>
           <div className="tagline">Making Sense of the News</div>
         </div>

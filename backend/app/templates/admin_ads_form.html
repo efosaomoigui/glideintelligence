@@ -43,8 +43,46 @@
         <div class="grid grid-3 mt-4">
             <div>
                 <label class="form-label">Placement Group</label>
-                <input type="text" name="placement_group" class="form-control" value="{{ ad.placement_group if ad else 'homepage_feed' }}" placeholder="e.g. homepage_feed">
-                <small class="text-xs text-muted">Usually 'homepage_feed'</small>
+                <select name="placement_group" class="form-control">
+                    <optgroup label="Global Placements">
+                        <option value="hero_spotlight" {% if ad and ad.placement_group == 'hero_spotlight' %}selected{% endif %}>Hero Spotlight (Sidebar)</option>
+                        <option value="homepage_feed" {% if ad and ad.placement_group == 'homepage_feed' %}selected{% endif %}{% if not ad %}selected{% endif %}>Homepage Feed (Middle)</option>
+                        <option value="homepage_sidebar" {% if ad and ad.placement_group == 'homepage_sidebar' %}selected{% endif %}>Homepage Sidebar (Right)</option>
+                        <option value="vertical_feed" {% if ad and ad.placement_group == 'vertical_feed' %}selected{% endif %}>Global Vertical Feed</option>
+                        <option value="vertical_sidebar" {% if ad and ad.placement_group == 'vertical_sidebar' %}selected{% endif %}>Global Vertical Sidebar</option>
+                        <option value="sidebar_card" {% if ad and ad.placement_group == 'sidebar_card' %}selected{% endif %}>Global Sidebar Card</option>
+                        <option value="topic_detail" {% if ad and ad.placement_group == 'topic_detail' %}selected{% endif %}>Topic Detail / Flyout</option>
+                    </optgroup>
+                    
+                    <optgroup label="Category Feeds">
+                        <option value="economy_feed" {% if ad and ad.placement_group == 'economy_feed' %}selected{% endif %}>Economy Feed</option>
+                        <option value="politics_feed" {% if ad and ad.placement_group == 'politics_feed' %}selected{% endif %}>Politics Feed</option>
+                        <option value="business_feed" {% if ad and ad.placement_group == 'business_feed' %}selected{% endif %}>Business Feed</option>
+                        <option value="technology_feed" {% if ad and ad.placement_group == 'technology_feed' %}selected{% endif %}>Technology Feed</option>
+                        <option value="security_feed" {% if ad and ad.placement_group == 'security_feed' %}selected{% endif %}>Security Feed</option>
+                        <option value="sport_feed" {% if ad and ad.placement_group == 'sport_feed' %}selected{% endif %}>Sport Feed</option>
+                        <option value="regional_feed" {% if ad and ad.placement_group == 'regional_feed' %}selected{% endif %}>Regional Feed</option>
+                        <option value="global-impact_feed" {% if ad and ad.placement_group == 'global-impact_feed' %}selected{% endif %}>Global Impact Feed</option>
+                        <option value="social_feed" {% if ad and ad.placement_group == 'social_feed' %}selected{% endif %}>Social Feed</option>
+                        <option value="environment_feed" {% if ad and ad.placement_group == 'environment_feed' %}selected{% endif %}>Environment Feed</option>
+                        <option value="general_feed" {% if ad and ad.placement_group == 'general_feed' %}selected{% endif %}>General Feed</option>
+                    </optgroup>
+
+                    <optgroup label="Category Sidebars">
+                        <option value="economy_sidebar" {% if ad and ad.placement_group == 'economy_sidebar' %}selected{% endif %}>Economy Sidebar</option>
+                        <option value="politics_sidebar" {% if ad and ad.placement_group == 'politics_sidebar' %}selected{% endif %}>Politics Sidebar</option>
+                        <option value="business_sidebar" {% if ad and ad.placement_group == 'business_sidebar' %}selected{% endif %}>Business Sidebar</option>
+                        <option value="technology_sidebar" {% if ad and ad.placement_group == 'technology_sidebar' %}selected{% endif %}>Technology Sidebar</option>
+                        <option value="security_sidebar" {% if ad and ad.placement_group == 'security_sidebar' %}selected{% endif %}>Security Sidebar</option>
+                        <option value="sport_sidebar" {% if ad and ad.placement_group == 'sport_sidebar' %}selected{% endif %}>Sport Sidebar</option>
+                        <option value="regional_sidebar" {% if ad and ad.placement_group == 'regional_sidebar' %}selected{% endif %}>Regional Sidebar</option>
+                        <option value="global-impact_sidebar" {% if ad and ad.placement_group == 'global-impact_sidebar' %}selected{% endif %}>Global Impact Sidebar</option>
+                        <option value="social_sidebar" {% if ad and ad.placement_group == 'social_sidebar' %}selected{% endif %}>Social Sidebar</option>
+                        <option value="environment_sidebar" {% if ad and ad.placement_group == 'environment_sidebar' %}selected{% endif %}>Environment Sidebar</option>
+                        <option value="general_sidebar" {% if ad and ad.placement_group == 'general_sidebar' %}selected{% endif %}>General Sidebar</option>
+                    </optgroup>
+                </select>
+                <small class="text-xs text-muted">Select where this ad should appear.</small>
             </div>
             <div>
                 <label class="form-label">Status</label>

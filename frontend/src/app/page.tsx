@@ -33,7 +33,7 @@ export default function Home() {
         {/* DESKTOP SIDEBAR */}
         <aside className="sidebar">
           <AIPulse />
-          <SidebarAdCard />
+          <SidebarAdCard placement="homepage_sidebar" />
           <CommunityVoices />
           <div className="quick-poll">
             <QuickPoll titleBelow={true} />

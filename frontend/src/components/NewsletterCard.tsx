@@ -43,7 +43,7 @@ export default function NewsletterCard({ title, description }: NewsletterCardPro
       <div className="sidebar-card newsletter-card" style={{ textAlign: "center", padding: "32px 20px" }}>
         <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>✅</div>
         <div className="sidebar-title">Synthesizing...</div>
-        <p className="newsletter-desc">Welcome to Glide Intelligence. Your daily brief will arrive at 6 AM WAT.</p>
+        <p className="newsletter-desc">Welcome to PAPERLY.. Your daily brief will arrive at 6 AM WAT.</p>
       </div>
     );
   }

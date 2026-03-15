@@ -42,21 +42,15 @@ function SponsoredSpotlight() {
 
   React.useEffect(() => {
     const fetchPool = async () => {
-      const seen = new Set<string>();
-      const pool: SponsorAd[] = [];
-      for (let i = 0; i < 4 && pool.length < 2; i++) {
-        try {
-          const res = await fetch("/api/ads/placement/hero_spotlight");
-          // Guard against HTML 404/500 responses — only parse if JSON
-          if (!res.ok || !res.headers.get("content-type")?.includes("application/json")) break;
-          const ad: SponsorAd = await res.json();
-          if (ad && !seen.has(ad.id) && ad.ad_type === "sponsor") {
-            seen.add(ad.id);
-            pool.push(ad);
-          }
-        } catch { break; }
+      try {
+        const res = await fetch("/api/ads/placement/hero_spotlight?limit=3");
+        if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+          const ads: SponsorAd[] = await res.json();
+          setSponsorAds(ads);
+        }
+      } catch (err) {
+        console.error("Failed to fetch sponsor ads", err);
       }
-      setSponsorAds(pool);
       setLoaded(true);
     };
     fetchPool();
@@ -80,7 +74,7 @@ function SponsoredSpotlight() {
         <h3 className="pulse-title">Sponsored Spotlight</h3>
       </div>
 
-      {hasSponsorAds ? sponsorAds.slice(0, 2).map((ad, i) => (
+      {sponsorAds.filter(a => a.ad_type === "sponsor").slice(0, 2).map((ad, i) => (
         <div key={ad.id} className="pulse-metric">
           <div className="metric-label" style={{ color: SPONSOR_COLORS[i] }}>
             {ad.sponsor?.tagline || "Sponsored Content"}
@@ -98,75 +92,38 @@ function SponsoredSpotlight() {
             {ad.sponsor?.cta_text || "Read Report"} →
           </button>
         </div>
-      )) : (
-        // Fallback demo sponsor cards that wire to the flyout just like real ads
-        <>
-          {([
-            {
-              id: "demo-1",
-              title: "Agricultural Intervention Fund Yields Results",
-              ad_type: "sponsor" as const,
-              sponsor: {
-                tagline: "Federal Government Focus",
-                summary: "New policy aims to stabilize food prices across the nation by providing direct support to smallholder farmers and cooperatives.",
-                full_content: "The Federal Government's Agricultural Intervention Fund has recorded significant milestones, channeling over ₦120bn to food production initiatives targeted at stabilizing commodity prices.",
-                cta_text: "Read Report",
-              }
-            },
-            {
-              id: "demo-2",
-              title: "Future Forward Banking Initiative",
-              ad_type: "sponsor" as const,
-              sponsor: {
-                tagline: "Zenith Bank",
-                summary: "Unveiling next-generation digital lending platforms designed to scale SMEs across West Africa.",
-                full_content: "Zenith Bank's Future Forward initiative introduces an AI-powered credit scoring system giving SMEs instant access to micro-loans up to ₦5m with no collateral requirement.",
-                cta_text: "Learn More",
-              }
-            }
-          ] as SponsorAd[]).map((ad, i) => (
-            <div key={ad.id} className="pulse-metric">
-              <div className="metric-label" style={{ color: SPONSOR_COLORS[i] }}>
-                {ad.sponsor?.tagline}
-              </div>
-              <div className="metric-text" style={{ fontWeight: 600, color: "white", marginBottom: "6px" }}>
-                {ad.title}
-              </div>
-              <div className="metric-text" style={{ fontSize: "0.95rem" }}>
-                {(ad.sponsor?.summary || "").slice(0, 90)}…
-              </div>
-              <button
-                onClick={() => openSponsorFlyout(ad)}
-                style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "12px", fontSize: "0.95rem", color: "#3498db", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer" }}
-              >
-                {ad.sponsor?.cta_text} →
-              </button>
-            </div>
-          ))}
-        </>
-      )}
+      ))}
 
       {/* Bottom slot: small AdSense */}
-      <div className="pulse-metric" style={{ borderBottom: "none", paddingBottom: 0, marginBottom: 0 }}>
-        <div className="metric-label" style={{ color: "#888", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>
-          Advertisement
-        </div>
-        <div style={{
-          minHeight: "90px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px dashed rgba(255,255,255,0.1)",
-          borderRadius: "6px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#444",
-          fontSize: "0.72rem",
-          letterSpacing: "0.05em"
-        }}>
-          {/* Paste AdSense snippet here */}
-          Ad Slot
-        </div>
-      </div>
+      {(() => {
+        const externalAd = sponsorAds.find(a => a.ad_type === "external");
+        return (
+          <div className="pulse-metric" style={{ borderBottom: "none", paddingBottom: 0, marginBottom: 0 }}>
+            <div className="metric-label" style={{ color: "#888", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>
+              Advertisement
+            </div>
+            <div style={{
+              minHeight: "90px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px dashed rgba(255,255,255,0.1)",
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#444",
+              fontSize: "0.72rem",
+              letterSpacing: "0.05em",
+              overflow: "hidden"
+            }}>
+              {externalAd && (externalAd as any).external?.script_code ? (
+                <div dangerouslySetInnerHTML={{ __html: (externalAd as any).external.script_code }} />
+              ) : (
+                "Ad Slot"
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

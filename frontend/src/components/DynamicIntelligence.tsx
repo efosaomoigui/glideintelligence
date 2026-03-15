@@ -31,8 +31,17 @@ function truncateText(text: string, maxChars: number = 350): string {
   return truncated.slice(0, truncated.lastIndexOf(" ")) + "...";
 }
 
-export default function DynamicIntelligence({ children }: { children?: React.ReactNode }) {
+export default function DynamicIntelligence({ 
+  children,
+  placement = "homepage_feed",
+  fallbackPlacement
+}: { 
+  children?: React.ReactNode;
+  placement?: string;
+  fallbackPlacement?: string;
+}) {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
+  // ... rest of state ...
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
   const [topics, setTopics] = useState<any[]>([]);
@@ -66,14 +75,14 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
         slug: t.slug,
         brief: truncateText(t.ai_brief || t.description || ""),
         updatedAt: getSafeRelativeTime(t.updated_at, t.updated_at_str),
-        category: t.badge || t.category || "Trending",
-        isDeveloping: t.is_trending || t.status === "developing",
+        category: t.badge || t.category || "General",
+        isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
         // Perspectives from source_perspectives (sentiment bars)
         perspectives: (t.source_perspectives && t.source_perspectives.length > 0)
           ? (t.source_perspectives || []).map((p: any) => ({
             source: p.source_name || p.frame_label || "",
             sentiment: p.sentiment as "positive" | "negative" | "neutral",
-            score: parseFloat(String(p.sentiment_percentage).replace("%", "").replace("+", "")) || 0,
+            score: parseFloat(String(p.sentiment_percentage || "0").replace("%", "").replace("+", "")) || 0,
           }))
           : [
             { source: "Nigerian Media", sentiment: "positive" as const, score: 75 },
@@ -97,10 +106,10 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
         sourceCount: t.source_count || (t.sources?.length ?? 0) || 0,
         commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
         // Raw integer so TopicCard fmt() formats it correctly and flyout math stays clean
-        viewCount: t.view_count ?? 0,
-        isPremium: t.is_premium ?? false,
-        intelligenceLevel: t.intelligence_level ?? "Standard",
-        analysisStatus: t.analysis_status ?? "stable",
+        viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0,
+        isPremium: t.is_premium === true || t.intelligence_level === "Premium",
+        intelligenceLevel: t.intelligence_level || "Standard",
+        analysisStatus: t.analysis_status || "stable",
       }));
 
 
@@ -122,22 +131,25 @@ export default function DynamicIntelligence({ children }: { children?: React.Rea
   const [ads, setAds] = useState<AdData[]>([]);
 
   const fetchAds = async () => {
-    try {
-      const pool: AdData[] = [];
-      for (let i = 0; i < 3; i++) {
-        const res = await fetch("/api/ads/placement/homepage_feed");
+    const fetchFrom = async (p: string) => {
+      try {
+        const res = await fetch(`/api/ads/placement/${p}?limit=3`);
         if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-          const ad = await res.json();
-          if (ad && !pool.find(a => a.id === ad.id)) {
-            pool.push(ad);
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAds(data);
+            return true;
           }
-        } else {
-          break; // No ads configured for this placement
         }
+      } catch (e) {
+        console.error(`Ad fetch failed for ${p}`, e);
       }
-      setAds(pool);
-    } catch (e) {
-      // Silently fail — ads are non-critical
+      return false;
+    };
+
+    const success = await fetchFrom(placement);
+    if (!success && fallbackPlacement) {
+      await fetchFrom(fallbackPlacement);
     }
   };
 

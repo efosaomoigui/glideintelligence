@@ -87,7 +87,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
   };
 
   // Determine status label and class
-  const isEnriching = topic.analysisStatus === 'pending' || topic.analysisStatus === 'processing' || topic.analysisStatus === 'pipeline_failed';
+  const isEnriching = topic.analysisStatus === 'pending' || topic.analysisStatus === 'processing';
   const statusLabel = isEnriching ? "Enriching Intelligence..." : (topic.isDeveloping ? "Developing" : topic.category);
 
   return (
@@ -157,7 +157,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          GLIDE brief
+          PAPERLY. BRIEF
         </div>
         <p className="brief-text">{topic.brief}</p>
       </div>

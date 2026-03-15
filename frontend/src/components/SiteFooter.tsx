@@ -16,11 +16,11 @@ export default function SiteFooter() {
       <div className="footer-inner">
         <div className="footer-top">
           <div className="footer-brand">
-            <div className="logo">
-              Glide<span className="accent">Intelligence</span>
+            <div className="logo" style={{ fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+              <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
             </div>
             <p className="footer-tagline">
-              We don&apos;t publish news. We make sense of it. Glide-powered
+              We don&apos;t publish news. We make sense of it. PAPERLY.-powered
               intelligence platform for Nigeria &amp; West Africa.
             </p>
           </div>
@@ -68,7 +68,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="footer-bottom">
-          <span>© 2026 GlideIntelligence News. All rights reserved.</span>
+          <span>© 2026 PAPERLY. All rights reserved.</span>
           <span>Powered by Scriptwall</span>
         </div>
       </div>

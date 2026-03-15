@@ -30,8 +30,8 @@ export default function MobileHeader({ activeCategory }: MobileHeaderProps) {
           </button>
 
           {/* Center: Logo */}
-          <Link href="/" className="mobile-logo" style={{ textDecoration: "none", color: "inherit" }}>
-            Glide<span className="accent">Intelligence</span>
+          <Link href="/" className="mobile-logo" style={{ textDecoration: "none", fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+            <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
           </Link>
 
           {/* Right: Actions */}

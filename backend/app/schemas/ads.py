@@ -13,11 +13,44 @@ class AdStatus(str, Enum):
     PAUSED = "paused"
     ARCHIVED = "archived"
 
+class AdPlacementGroup(str, Enum):
+    HERO_SPOTLIGHT = "hero_spotlight"
+    HOMEPAGE_FEED = "homepage_feed"
+    HOMEPAGE_SIDEBAR = "homepage_sidebar"
+    VERTICAL_FEED = "vertical_feed"
+    VERTICAL_SIDEBAR = "vertical_sidebar"
+    SIDEBAR_CARD = "sidebar_card"
+    TOPIC_DETAIL = "topic_detail"
+    
+    # Specific category feeds
+    POLITICS_FEED = "politics_feed"
+    POLITICS_SIDEBAR = "politics_sidebar"
+    BUSINESS_FEED = "business_feed"
+    BUSINESS_SIDEBAR = "business_sidebar"
+    ECONOMY_FEED = "economy_feed"
+    ECONOMY_SIDEBAR = "economy_sidebar"
+    TECHNOLOGY_FEED = "technology_feed"
+    TECHNOLOGY_SIDEBAR = "technology_sidebar"
+    SECURITY_FEED = "security_feed"
+    SECURITY_SIDEBAR = "security_sidebar"
+    SPORT_FEED = "sport_feed"
+    SPORT_SIDEBAR = "sport_sidebar"
+    REGIONAL_FEED = "regional_feed"
+    REGIONAL_SIDEBAR = "regional_sidebar"
+    GLOBAL_IMPACT_FEED = "global-impact_feed"
+    GLOBAL_IMPACT_SIDEBAR = "global-impact_sidebar"
+    SOCIAL_FEED = "social_feed"
+    SOCIAL_SIDEBAR = "social_sidebar"
+    ENVIRONMENT_FEED = "environment_feed"
+    ENVIRONMENT_SIDEBAR = "environment_sidebar"
+    GENERAL_FEED = "general_feed"
+    GENERAL_SIDEBAR = "general_sidebar"
+
 # Base common fields
 class AdBase(BaseModel):
     title: str
     status: AdStatus = AdStatus.ACTIVE
-    placement_group: str
+    placement_group: AdPlacementGroup
     priority: int = 0
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -59,7 +92,7 @@ class AdCreate(AdBase):
 class AdUpdate(BaseModel):
     title: Optional[str] = None
     status: Optional[AdStatus] = None
-    placement_group: Optional[str] = None
+    placement_group: Optional[AdPlacementGroup] = None
     priority: Optional[int] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

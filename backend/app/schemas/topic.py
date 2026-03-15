@@ -155,9 +155,10 @@ class TopicTrendingSchema(TopicSchema):
             except Exception:
                 pass
 
-        # Frontend-enriched attrs (computed strings or plain dicts)
+        # Frontend-enriched attrs (computed strings or plain dicts or private state)
+        # Use getattr() to handle both standard cols and synthetic attributes set during enrichment
         for attr in ('ai_brief', 'bullets', 'wyntk', 'updated_at_str', 'sources', 'engagement', 'intelligence_level', 'is_premium', 'impact'):
-            val = obj_dict.get(attr)
+            val = getattr(values, attr, None)
             if val is not None:
                 data[attr] = val
 

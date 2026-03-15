@@ -88,8 +88,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
       {/* ─── HEADER ─── */}
       <header className="site-header">
         <div className="header-top">
-          <div className="logo">
-            Glide<span className="accent">Intelligence</span>
+          <div className="logo" style={{ fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+            <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
           </div>
 
           <nav className="breadcrumb">
@@ -483,7 +483,9 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <div className="logo">Glide<span className="accent">Intelligence</span></div>
+              <div className="logo" style={{ fontFamily: '"Playfair Display", Georgia, serif', fontStyle: 'italic', fontWeight: 800 }}>
+                <span style={{ color: "#000" }}>PA</span><span style={{ color: "#c0392b" }}>PERLY.</span>
+              </div>
               <p className="footer-tagline">
                 We don't publish news. We make sense of it. AI-powered intelligence platform for Nigeria & West Africa.
               </p>
@@ -498,7 +500,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 GlideIntelligence. All rights reserved.</span>
+            <span>© 2026 PAPERLY. All rights reserved.</span>
             <span>Built in Lagos, Nigeria 🇳🇬</span>
           </div>
         </div>

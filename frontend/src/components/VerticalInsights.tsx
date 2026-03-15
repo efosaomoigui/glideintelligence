@@ -54,7 +54,7 @@ export default function VerticalInsights({ title, color, items }: VerticalInsigh
                 <button 
                   onClick={handleOpenFlyout}
                   className="read-more-pulse"
-                  style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.75rem', fontWeight: 'bold', marginTop: '4px', textDecoration: 'underline' }}
+                  style={{ padding: 0, background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', display: 'block', fontSize: '0.75rem', fontWeight: 'bold', marginTop: '4px', textDecoration: 'underline', textShadow: 'none' }}
                 >
                   Read more analysis
                 </button>

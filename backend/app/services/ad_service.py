@@ -9,16 +9,22 @@ class AdService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_ad_for_placement(self, placement_group: str) -> Ad | None:
+    async def get_ad_for_placement(self, placement_group: str, limit: int = 1) -> list[Ad]:
         """
-        Fetch a random active ad for a specific placement group, respecting dates.
+        Fetch random active ads for a specific placement group, respecting dates.
         """
         now = datetime.utcnow()
+        from sqlalchemy.orm import selectinload
         
         # Build query for active ads in this placement group
         # that are within their date bounds
         query = (
             select(Ad)
+            .options(
+                selectinload(Ad.external),
+                selectinload(Ad.sponsor),
+                selectinload(Ad.image)
+            )
             .where(Ad.status == AdStatus.ACTIVE)
             .where(Ad.placement_group == placement_group)
             .where(
@@ -28,28 +34,13 @@ class AdService:
                 )
             )
             .order_by(func.random()) # Random rotation
-            .limit(1)
+            .limit(limit)
         )
         
         result = await self.db.execute(query)
-        ad = result.scalar_one_or_none()
+        ads = result.unique().scalars().all()
         
-        if ad:
-            # eager load the sub-type based on ad_type
-            # We can just lazily access it or rely on subqueryload if needed, 
-            # but for a single item, accessing the relation is fine if we use selectinload
-            # However, since they are simple direct relationships, we'll let the schema or explicit load handle it.
-            # Let's explicitly load the relations to avoid detached instance errors.
-            from sqlalchemy.orm import selectinload
-            query = query.options(
-                selectinload(Ad.external),
-                selectinload(Ad.sponsor),
-                selectinload(Ad.image)
-            )
-            result = await self.db.execute(query)
-            ad = result.scalar_one_or_none()
-            
-        return ad
+        return list(ads)
 
     async def track_view(self, ad_id: str, page_location: str = None, session_id: str = None):
         """Track an ad view and update revenue."""
