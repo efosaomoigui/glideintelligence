@@ -443,7 +443,7 @@ export default function CategoryPage() {
             </Link>
             <div className="tagline">Making Sense of the News</div>
           </div>
-          <button className="search-bar" onClick={() => window.dispatchEvent(new CustomEvent("open-flyout", { detail: { type: "search" } }))} style={{ textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <button className="search-bar" onClick={() => window.dispatchEvent(new CustomEvent("open-flyout", { detail: { type: "search" } }))} style={{ textAlign: "left", cursor: "pointer" }}>
             <svg
               className="search-icon"
               fill="none"
@@ -457,9 +457,12 @@ export default function CategoryPage() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <div className="w-full bg-[var(--bg)] border border-[var(--rule)] rounded-lg py-[10px] pr-4 pl-10 font-[var(--sans)] text-[0.88rem] text-[var(--ink-muted)]">
-              Search {effectiveConfig.name.toLowerCase()} topics...
-            </div>
+            <input
+              type="text"
+              placeholder={`Search ${effectiveConfig.name.toLowerCase()} topics...`}
+              readOnly
+              style={{ cursor: "pointer", pointerEvents: "none" }}
+            />
           </button>
           <div className="header-actions">
             <button className="btn btn-ghost" onClick={() => window.dispatchEvent(new CustomEvent("open-flyout", { detail: { type: "login" } }))}>Sign In</button>
