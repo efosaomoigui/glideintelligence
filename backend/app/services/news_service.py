@@ -471,6 +471,11 @@ class NewsService:
             topic.intelligence_level = "Standard"
             topic.is_premium = False
 
+        # 5c. GEO Context - Surface region
+        topic.region_name = None
+        if 'regional_categories' in topic.__dict__ and topic.regional_categories:
+            topic.region_name = topic.regional_categories[0].region_name
+
         # 6. Source Perspectives — use real DB data if available, else generate topic-specific mock
         # Safe check for loaded relationship in async session
         real_perspectives = []

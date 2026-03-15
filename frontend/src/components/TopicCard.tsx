@@ -25,6 +25,7 @@ interface TopicCardProps {
     id: string;
     title: string;
     category: string;
+    region?: string | null;
     isDeveloping?: boolean;
     updatedAt: string;
     brief: string;
@@ -116,6 +117,22 @@ export default function TopicCard({ topic }: TopicCardProps) {
               )}
               {statusLabel}
             </div>
+            {topic.region && (
+              <div
+                className="topic-badge"
+                title={`Regional focus: ${topic.region}`}
+                style={{
+                  background: "rgba(41, 128, 185, 0.12)",
+                  color: "#2980b9",
+                  border: "1px solid rgba(41, 128, 185, 0.25)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                🌍 {topic.region}
+              </div>
+            )}
             {topic.seeMore && (
               <div key="see-more" className="topic-badge" style={{ background: "#f1f5f9", color: "#64748b", border: "1px solid #cbd5e1" }}>
                 see intelligence analysis

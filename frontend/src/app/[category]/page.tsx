@@ -51,6 +51,7 @@ function adaptTopic(t: any) {
     title: t.title,
     slug: t.slug,
     category: t.category || t.badge || "General",
+    region: t.region_name || null,
     isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
     updatedAt: t.updated_at_str || t.updatedAt || "Recently",
     brief: truncateText(t.ai_brief || t.description || "", 350),

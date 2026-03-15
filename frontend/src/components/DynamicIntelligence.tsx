@@ -110,6 +110,7 @@ export default function DynamicIntelligence({
         isPremium: Boolean(t.is_premium) || t.intelligence_level === "Premium",
         intelligenceLevel: t.intelligence_level || "Standard",
         analysisStatus: t.analysis_status || "stable",
+        region: t.region_name || null,
         seeMore: true,
         hasSocialReactions: (t.social_reactions && t.social_reactions.length > 0)
       }));
