@@ -58,7 +58,7 @@ export default function AIPulse() {
     regional_text: "West African bloc tensions rise as Mali, Burkina Faso, Niger formalize exit. Nigeria's mediator role questioned.",
   };
 
-  const truncate = (text: string, maxWords: number = 30) => {
+  const truncate = (text: string, maxWords: number = 15) => {
     if (!text) return "";
     const words = text.split(/\s+/);
     if (words.length <= maxWords) return text;
@@ -105,7 +105,7 @@ export default function AIPulse() {
             <button 
               onClick={() => handleOpenFlyout(pulse.trending_id)}
               className="read-more-pulse"
-              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}
+              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px', textShadow: 'none' }}
             >
               Read more analysis
             </button>
@@ -124,7 +124,7 @@ export default function AIPulse() {
             <button 
               onClick={() => handleOpenFlyout(pulse.regional_id)}
               className="read-more-pulse"
-              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}
+              style={{ padding: 0, background: 'none', border: 'none', color: '#e67e22', cursor: 'pointer', display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px', textShadow: 'none' }}
             >
               Read more analysis
             </button>

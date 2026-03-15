@@ -57,7 +57,7 @@ async function getHeroTopics(): Promise<Topic[]> {
           sources: formattedSources,
           slug: t.slug || t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
           status: t.badge || "DEVELOPING",
-          isPremium: t.is_premium ?? false,
+          isPremium: Boolean(t.is_premium),
           intelligenceLevel: t.intelligence_level ?? "Standard",
           analysisStatus: t.analysis_status ?? "stable",
           wyntk: t.analysis?.what_you_need_to_know || t.bullets || t.analysis?.key_points || []

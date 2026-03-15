@@ -38,6 +38,7 @@ interface TopicCardProps {
     intelligenceLevel?: string;
     analysisStatus?: string;
     slug?: string;
+    seeMore?: boolean;
   };
 }
 
@@ -114,6 +115,11 @@ export default function TopicCard({ topic }: TopicCardProps) {
               )}
               {statusLabel}
             </div>
+            {topic.seeMore && (
+              <div key="see-more" className="topic-badge" style={{ background: "#f1f5f9", color: "#64748b", border: "1px solid #cbd5e1" }}>
+                see intelligence analysis
+              </div>
+            )}
             {topic.isPremium && (
               <div className="topic-badge premium" style={{ background: "rgba(var(--accent-rgb, 192,57,43), 0.15)", color: "var(--accent)", border: "1px solid var(--accent)" }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: "4px" }}>

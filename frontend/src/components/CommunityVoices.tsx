@@ -71,7 +71,13 @@ export default function CommunityVoices() {
               <div className="voice-role">{voice.role}</div>
             </div>
           </div>
-          <p className="voice-text">&ldquo;{voice.text}&rdquo;</p>
+          <p className="voice-text">
+            &ldquo;
+            {voice.text.split(/\s+/).length > 15 
+              ? voice.text.split(/\s+/).slice(0, 15).join(" ") + "..." 
+              : voice.text}
+            &rdquo;
+          </p>
         </div>
       ))}
     </div>

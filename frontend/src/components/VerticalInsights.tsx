@@ -32,8 +32,8 @@ export default function VerticalInsights({ title, color, items }: VerticalInsigh
 
       {items.map((item, i) => {
         const words = item.text.split(/\s+/);
-        const isTruncated = words.length > 30;
-        const displayText = isTruncated ? words.slice(0, 30).join(" ") + "..." : item.text;
+        const isTruncated = words.length > 15;
+        const displayText = isTruncated ? words.slice(0, 15).join(" ") + "..." : item.text;
 
         const handleOpenFlyout = () => {
           if (!item.id) return;

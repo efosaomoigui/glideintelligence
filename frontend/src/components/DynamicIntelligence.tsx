@@ -107,9 +107,10 @@ export default function DynamicIntelligence({
         commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
         // Raw integer so TopicCard fmt() formats it correctly and flyout math stays clean
         viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0,
-        isPremium: t.is_premium === true || t.intelligence_level === "Premium",
+        isPremium: Boolean(t.is_premium) || t.intelligence_level === "Premium",
         intelligenceLevel: t.intelligence_level || "Standard",
         analysisStatus: t.analysis_status || "stable",
+        seeMore: true
       }));
 
 

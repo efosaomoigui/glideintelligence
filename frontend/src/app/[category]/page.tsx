@@ -68,7 +68,7 @@ function adaptTopic(t: any) {
     sourceCount: t.source_count || 1,
     commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
     viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0, 
-    isPremium: t.is_premium === true || t.intelligence_level === "Premium",
+    isPremium: Boolean(t.is_premium) || t.intelligence_level === "Premium",
     intelligenceLevel: t.intelligence_level || "Standard",
     analysisStatus: t.analysis_status || "stable",
   };
