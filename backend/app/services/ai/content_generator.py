@@ -524,7 +524,7 @@ Do not include explanations, comments, or markdown.
 ════════════════════════
 OUTPUT FORMAT
 ════════════════════════
-{
+{{
  "sentiment_breakdown": [],
  "source_perspectives": [],
  "regional_impacts": [],
