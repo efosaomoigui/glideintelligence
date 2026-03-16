@@ -42,7 +42,12 @@ export default function DetailFlyout() {
           setTopicData(customEvent.detail);
         }
         setLoading(false);
-        window.history.pushState({ flyoutType: type, infoType: iType }, "", `/${type}${iType ? `/${iType}` : ""}`);
+        // Keep the current pathname — only add query params so Next.js does NOT navigate the background page
+        const utilUrl = new URL(window.location.href);
+        utilUrl.searchParams.set("flyout", type);
+        if (iType) utilUrl.searchParams.set("flyout_sub", iType);
+        else utilUrl.searchParams.delete("flyout_sub");
+        window.history.pushState({ flyoutType: type, infoType: iType }, "", utilUrl.toString());
         return;
       }
 
@@ -140,16 +145,12 @@ export default function DetailFlyout() {
     setTopicData(null);
     
     if (updateHistory) {
-      // Clean up only the topic query parameter, preserving the current page
+      // Clean up topic and utility flyout query params, preserving the current page pathname
       const url = new URL(window.location.href);
       url.searchParams.delete("topic");
-      // Also handle legacy utility paths if they are in the pathname
-      const utilityPaths = ["/search", "/subscribe", "/login", "/info", "/sponsor"];
-      let newPath = url.pathname;
-      if (utilityPaths.some(p => newPath.startsWith(p))) {
-        newPath = "/";
-      }
-      
+      url.searchParams.delete("flyout");
+      url.searchParams.delete("flyout_sub");
+      const newPath = url.pathname;
       const nextUrl = url.searchParams.toString() ? `${newPath}?${url.searchParams.toString()}` : newPath;
       window.history.pushState({}, "", nextUrl);
     }
@@ -579,6 +580,11 @@ function LoginFlyoutContent({ initialIsRegistering = false }: { initialIsRegiste
         if (userRes.ok) {
           const userData = await userRes.json();
           login(userData, data.access_token);
+          if (isRegistering) {
+            // Full reload after first-time registration so all page state is fresh
+            window.location.reload();
+            return;
+          }
           const closeBtn = document.querySelector(".flyout-close") as HTMLButtonElement;
           if (closeBtn) closeBtn.click();
         }
