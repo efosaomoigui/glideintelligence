@@ -28,26 +28,28 @@ const VOICES = [
   },
 ];
 
-export default function CommunityVoices() {
-  const [voices, setVoices] = useState<any[]>([]);
+export default function CommunityVoices({ initialData }: { initialData?: any[] }) {
+  const [voices, setVoices] = useState<any[]>(initialData || []);
   const { user } = useAuth();
 
   useEffect(() => {
-    fetch(`/api/sidebar`)
-      .then(r => r.json())
-      .then(data => {
-         if (data.voices && data.voices.length > 0) {
-            setVoices(data.voices.map((v: any) => ({
-                initials: v.initials,
-                color: v.color,
-                name: v.name,
-                role: v.role,
-                text: v.quote
-            })));
-         }
-      })
-      .catch(e => console.error("Failed to load community voices", e));
-  }, []);
+    if (!initialData || initialData.length === 0) {
+      fetch(`/api/sidebar`)
+        .then(r => r.json())
+        .then(data => {
+           if (data.voices && data.voices.length > 0) {
+              setVoices(data.voices.map((v: any) => ({
+                  initials: v.initials,
+                  color: v.color,
+                  name: v.name,
+                  role: v.role,
+                  text: v.quote
+              })));
+           }
+        })
+        .catch(e => console.error("Failed to load community voices", e));
+    }
+  }, [initialData]);
 
   return (
     <div className="community-voices">
@@ -73,9 +75,9 @@ export default function CommunityVoices() {
           </div>
           <p className="voice-text">
             &ldquo;
-            {voice.text.split(/\s+/).length > 15 
-              ? voice.text.split(/\s+/).slice(0, 15).join(" ") + "..." 
-              : voice.text}
+            {(voice.text || "").split(/\s+/).length > 15 
+              ? (voice.text || "").split(/\s+/).slice(0, 15).join(" ") + "..." 
+              : (voice.text || "")}
             &rdquo;
           </p>
         </div>

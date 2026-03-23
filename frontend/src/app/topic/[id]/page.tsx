@@ -1,7 +1,56 @@
 import React from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { Metadata } from "next";
 import "./topic.css";
+
+// Metadata generation for SEO
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const topicId = resolvedParams.id;
+  const topicData = await getTopicDetails(topicId);
+
+  if (!topicData) {
+    return {
+      title: "Topic Not Found | PAPERLY.",
+    };
+  }
+
+  const title = topicData.title;
+  const description = topicData.analysis?.executive_summary || topicData.description || "Synthesised intelligence report.";
+
+  return {
+    title: `${title} | PAPERLY. Intelligence`,
+    description: description.substring(0, 160),
+    alternates: {
+      canonical: `/topic/${topicId}`,
+      languages: {
+        "en-NG": `/topic/${topicId}`,
+        "en": `/topic/${topicId}`,
+        "x-default": `/topic/${topicId}`,
+      },
+    },
+    openGraph: {
+      title: `${title} | PAPERLY.`,
+      description: description.substring(0, 160),
+      type: "article",
+      url: `/topic/${topicId}`,
+      images: [
+        {
+          url: "/icon.png",
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title,
+      description: description.substring(0, 160),
+    },
+  };
+}
 
 // Mocking server-side data fetching directly in the component for simplicity of migration
 // In a real app, you would likely fetch this by ID/Slug 

@@ -34,19 +34,21 @@ function truncateText(text: string, maxChars: number = 350): string {
 export default function DynamicIntelligence({ 
   children,
   placement = "homepage_feed",
-  fallbackPlacement
+  fallbackPlacement,
+  initialTopics = []
 }: { 
   children?: React.ReactNode;
   placement?: string;
   fallbackPlacement?: string;
+  initialTopics?: any[];
 }) {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("today");
   // ... rest of state ...
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
-  const [topics, setTopics] = useState<any[]>([]);
+  const [topics, setTopics] = useState<any[]>(initialTopics);
   const [loading, setLoading] = useState<boolean>(false);
-  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [hasMore, setHasMore] = useState<boolean>(initialTopics.length > 0);
 
   const fetchTopics = async (period: string, region: string, pageNum: number, append = false) => {
     setLoading(true);
@@ -156,8 +158,18 @@ export default function DynamicIntelligence({
     }
   };
 
+  const isFirstRender = React.useRef(true);
+
   // Initial load and when period/region changes
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchAds();
+      // Skip redundant fetch if SSR already provided the topics
+      if (initialTopics && initialTopics.length > 0 && selectedPeriod === "today" && selectedRegion === "all") {
+        return;
+      }
+    }
     setPage(1);
     fetchTopics(selectedPeriod, selectedRegion, 1, false);
     fetchAds();

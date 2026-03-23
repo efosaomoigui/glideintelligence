@@ -37,15 +37,17 @@ interface SidebarData {
 
 // All API calls use relative /api/ paths — proxied by Next.js to localhost:8000
 
-export default function AIPulse() {
-  const [data, setData] = useState<SidebarPulse | null>(null);
+export default function AIPulse({ initialData }: { initialData?: SidebarPulse }) {
+  const [data, setData] = useState<SidebarPulse | null>(initialData || null);
 
   useEffect(() => {
-    fetch(`/api/sidebar`)
-      .then((r) => r.json())
-      .then((json) => setData(json.pulse))
-      .catch(() => {/* silently fail – static fallback below */});
-  }, []);
+    if (!initialData) {
+      fetch(`/api/sidebar`)
+        .then((r) => r.json())
+        .then((json) => setData(json.pulse))
+        .catch(() => {/* silently fail – static fallback below */});
+    }
+  }, [initialData]);
 
   // Fallback while loading or on error — preserve exact original layout/classes
   const pulse: SidebarPulse = data ?? {

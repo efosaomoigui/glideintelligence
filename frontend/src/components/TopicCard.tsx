@@ -207,7 +207,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
           How Different Sources Frame This
         </div>
         <div className="perspective-grid">
-          {topic.perspectives.map((p, i) => (
+          {(topic.perspectives || []).map((p, i) => (
             <div key={i} className="perspective-item">
               <div className="perspective-source" style={{ color: "var(--ink)", fontWeight: 700 }}>{p.source}</div>
               <div className="perspective-bar">
@@ -245,7 +245,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
                 Impact Analysis
               </div>
         <div className="impact-grid">
-          {topic.impacts.map((item, i) => (
+          {(topic.impacts || []).map((item, i) => (
             <div key={i} className="impact-item">
               <div className="impact-icon">{item.icon}</div>
               <div className="impact-title">{item.title}</div>
@@ -280,7 +280,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
       <div className="topic-footer">
         <div className="source-count">
           <div className="source-avatars">
-            {topic.sourceAvatars.slice(0, 3).map((avatar, i) => (
+            {(topic.sourceAvatars || []).slice(0, 3).map((avatar, i) => (
               <div
                 key={i}
                 className="source-avatar"
