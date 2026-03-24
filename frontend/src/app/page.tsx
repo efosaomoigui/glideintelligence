@@ -10,6 +10,7 @@ import QuickPoll from "@/components/QuickPoll";
 import SiteFooter from "@/components/SiteFooter";
 import MobileSidebarCollapsible from "@/components/MobileSidebarCollapsible";
 import SidebarAdCard from "@/components/ads/SidebarAdCard";
+import { adaptTopic } from "@/utils/topicAdapter";
 
 
 
@@ -50,35 +51,13 @@ async function getSidebarData() {
   return { pulse: null, voices: [] };
 }
 
-const AVATAR_COLORS = ["#e74c3c", "#9b59b6", "#1abc9c", "#34495e", "#e67e22", "#2980b9", "#c0392b", "#16a085"];
-
-function truncateText(text: string, maxChars: number = 350): string {
-  if (!text || text.length <= maxChars) return text;
-  const truncated = text.slice(0, maxChars);
-  return truncated.slice(0, truncated.lastIndexOf(" ")) + "...";
-}
 
 export default async function Home() {
   const homeData = await getHomeData();
   const sidebarData = await getSidebarData();
 
-  // Transform topics for DynamicIntelligence
-  const initialTopics = (homeData.trending_topics || []).map((t: any) => ({
-    id: String(t.id),
-    title: t.title,
-    slug: t.slug,
-    brief: truncateText(t.ai_brief || t.description || ""),
-    updatedAt: t.updated_at_str || "Recently",
-    category: t.badge || t.category || "General",
-    isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
-    sourceCount: t.source_count || (t.sources?.length ?? 0) || 0,
-    commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
-    viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0,
-    sourceAvatars: (t.sources || []).slice(0, 4).map((s: any, idx: number) => ({
-        initials: (s.name || "UN").substring(0, 2).toUpperCase(),
-        color: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-    })),
-  }));
+  // Transform topics for DynamicIntelligence using shared adapter
+  const initialTopics = (homeData.trending_topics || []).map(adaptTopic);
 
   return (
     <>

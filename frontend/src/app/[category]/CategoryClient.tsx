@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import TopicCard from "@/components/TopicCard";
 import VerticalInsights from "@/components/VerticalInsights";
+import { adaptTopic } from "@/utils/topicAdapter";
 import KeyTopics from "@/components/KeyTopics";
 import NewsletterCard from "@/components/NewsletterCard";
 import SidebarAdCard from "@/components/ads/SidebarAdCard";
@@ -12,63 +13,6 @@ import VerticalHeader from "@/components/VerticalHeader";
 import MobileHeader from "@/components/MobileHeader";
 import SiteFooter from "@/components/SiteFooter";
 
-/* ──────────────────────────────────────────────────────
-   ADAPTER: Map API topic -> TopicCard prop shape
-────────────────────────────────────────────────────── */
-function truncateText(text: string, maxChars: number = 350): string {
-  if (!text || text.length <= maxChars) return text;
-  const truncated = text.slice(0, maxChars);
-  return truncated.slice(0, truncated.lastIndexOf(" ")) + "...";
-}
-
-function adaptTopic(t: any) {
-  const perspectives = (t.source_perspectives || t._perspectives_data || []).map((p: any) => ({
-    source: p.source_name || p.frame_label || "Source",
-    sentiment: (p.sentiment || "neutral") as "positive" | "negative" | "neutral",
-    score: typeof p.sentiment_percentage === "string"
-      ? parseInt(p.sentiment_percentage.replace("%", "").replace("+", "")) || 0
-      : (p.sentiment_score || 0) * 100,
-  }));
-
-  const impacts = (t.regional_impacts || t._impacts_data || []).map((imp: any) => ({
-    icon: imp.icon || "📊",
-    title: imp.title || imp.impact_category || "Impact",
-    value: imp.value || imp.context || "",
-  }));
-
-  const sourceAvatars = (t.sources || []).map((s: any) => ({
-    initials: (s.name || "???").substring(0, 2).toUpperCase(),
-    color: s.bg || "#3498db",
-  }));
-
-  return {
-    id: String(t.id),
-    title: t.title,
-    slug: t.slug,
-    category: t.category || t.badge || "General",
-    region: t.region_name || null,
-    isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
-    updatedAt: t.updated_at_str || t.updatedAt || "Recently",
-    brief: truncateText(t.ai_brief || t.description || "", 350),
-    perspectives: perspectives.length ? perspectives : [
-      { source: "Nigerian Media", sentiment: "positive" as const, score: 75 },
-      { source: "International", sentiment: "neutral" as const, score: 50 },
-      { source: "Social Media", sentiment: "neutral" as const, score: 45 },
-    ],
-    impacts: impacts.length ? impacts : [
-      { icon: "📊", title: "Analysis", value: "Intelligence synthesis in progress" },
-    ],
-    sourceAvatars: sourceAvatars.length ? sourceAvatars : [
-      { initials: "GL", color: "#e74c3c" },
-    ],
-    sourceCount: t.source_count || 1,
-    commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
-    viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0, 
-    isPremium: Boolean(t.is_premium) || t.intelligence_level === "Premium",
-    intelligenceLevel: t.intelligence_level || "Standard",
-    analysisStatus: t.analysis_status || "stable",
-  };
-}
 
 const NAV_LINKS = [
   { label: "All Stories", href: "/" },

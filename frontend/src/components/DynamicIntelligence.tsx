@@ -3,33 +3,8 @@
 import React, { useEffect, useState } from "react";
 import TopicCard from "@/components/TopicCard";
 import GenericAd, { AdData } from "@/components/ads/GenericAd";
-import { formatDistanceToNow } from "date-fns";
+import { adaptTopic } from "@/utils/topicAdapter";
 
-// Helper to format numbers like 2800 -> 2.8K
-function formatViews(num: number): string {
-  if (!num) return "0";
-  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-  return num.toString();
-}
-
-// Safe relative time using date-fns and fallback
-function getSafeRelativeTime(dateStr: string, fallbackStr: string): string {
-  if (!dateStr) return fallbackStr || "Recently";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return fallbackStr || "Recently";
-    return formatDistanceToNow(d, { addSuffix: true });
-  } catch {
-    return fallbackStr || "Recently";
-  }
-}
-
-function truncateText(text: string, maxChars: number = 350): string {
-  if (!text || text.length <= maxChars) return text;
-  const truncated = text.slice(0, maxChars);
-  return truncated.slice(0, truncated.lastIndexOf(" ")) + "...";
-}
 
 export default function DynamicIntelligence({ 
   children,
@@ -68,54 +43,7 @@ export default function DynamicIntelligence({
         throw new Error("API did not return valid JSON");
       }
 
-      // Backend returns PaginatedResponse: { items, total, page, limit, has_more }
-      const AVATAR_COLORS = ["#e74c3c", "#9b59b6", "#1abc9c", "#34495e", "#e67e22", "#2980b9", "#c0392b", "#16a085"];
-
-      const transformed = (data.items || []).map((t: any) => ({
-        id: String(t.id),
-        title: t.title,
-        slug: t.slug,
-        brief: truncateText(t.ai_brief || t.description || ""),
-        updatedAt: getSafeRelativeTime(t.updated_at, t.updated_at_str),
-        category: t.badge || t.category || "General",
-        isDeveloping: t.is_trending || t.status === "developing" || (t.analysis_status && t.analysis_status !== 'complete' && t.analysis_status !== 'stable'),
-        // Perspectives from source_perspectives (sentiment bars)
-        perspectives: (t.source_perspectives && t.source_perspectives.length > 0)
-          ? (t.source_perspectives || []).map((p: any) => ({
-            source: p.source_name || p.frame_label || "",
-            sentiment: p.sentiment as "positive" | "negative" | "neutral",
-            score: parseFloat(String(p.sentiment_percentage || "0").replace("%", "").replace("+", "")) || 0,
-          }))
-          : [
-            { source: "Nigerian Media", sentiment: "positive" as const, score: 75 },
-            { source: "International", sentiment: "neutral" as const, score: 50 },
-            { source: "Social Media", sentiment: "neutral" as const, score: 45 },
-          ],
-        // Regional impacts
-        impacts: (t.regional_impacts || []).map((i: any) => ({
-          icon: i.icon || "📊",
-          title: i.title,
-          value: i.value,
-        })),
-        // Source avatars: use real publication names from sources[] array
-        sourceAvatars: (t.sources || []).slice(0, 4).map((s: any, idx: number) => {
-          const name: string = s.name || "Unknown";
-          return {
-            initials: name.substring(0, 2).toUpperCase(),
-            color: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-          };
-        }),
-        sourceCount: t.source_count || (t.sources?.length ?? 0) || 0,
-        commentCount: t.engagement?.comments ?? t.comment_count ?? 0,
-        // Raw integer so TopicCard fmt() formats it correctly and flyout math stays clean
-        viewCount: (t.engagement?.views_raw) ?? (t.view_count) ?? 0,
-        isPremium: Boolean(t.is_premium) || t.intelligence_level === "Premium",
-        intelligenceLevel: t.intelligence_level || "Standard",
-        analysisStatus: t.analysis_status || "stable",
-        region: t.region_name || null,
-        seeMore: true,
-        hasSocialReactions: (t.social_reactions && t.social_reactions.length > 0)
-      }));
+      const transformed = (data.items || []).map(adaptTopic);
 
 
       // Deduplicate by ID to avoid React duplicate-key warnings on overlapping pages

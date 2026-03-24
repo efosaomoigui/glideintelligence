@@ -51,6 +51,18 @@ function fmt(n: number): string {
   return String(n);
 }
 
+const DEFAULT_PERSPECTIVES: Perspective[] = [
+  { source: "Nigerian Media", sentiment: "positive", score: 75 },
+  { source: "International", sentiment: "neutral", score: 50 },
+  { source: "Social Media", sentiment: "neutral", score: 45 },
+];
+
+const DEFAULT_IMPACTS: ImpactItem[] = [
+  { icon: "📊", title: "General Impact", value: "Analysis in progress" },
+  { icon: "🌍", title: "Regional Focus", value: "Standard tracking" },
+  { icon: "📍", title: "Local Reach", value: "Processing" },
+];
+
 export default function TopicCard({ topic }: TopicCardProps) {
   const [liveComments, setLiveComments] = useState(topic.commentCount || 0);
   const [liveViews, setLiveViews] = useState(() => fmt(topic.viewCount || 0));
@@ -207,7 +219,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
           How Different Sources Frame This
         </div>
         <div className="perspective-grid">
-          {(topic.perspectives || []).map((p, i) => (
+          {(topic.perspectives && topic.perspectives.length > 0 ? topic.perspectives : DEFAULT_PERSPECTIVES).map((p, i) => (
             <div key={i} className="perspective-item">
               <div className="perspective-source" style={{ color: "var(--ink)", fontWeight: 700 }}>{p.source}</div>
               <div className="perspective-bar">
@@ -245,7 +257,7 @@ export default function TopicCard({ topic }: TopicCardProps) {
                 Impact Analysis
               </div>
         <div className="impact-grid">
-          {(topic.impacts || []).map((item, i) => (
+          {(topic.impacts && topic.impacts.length > 0 ? topic.impacts : DEFAULT_IMPACTS).map((item, i) => (
             <div key={i} className="impact-item">
               <div className="impact-icon">{item.icon}</div>
               <div className="impact-title">{item.title}</div>
