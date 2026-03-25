@@ -65,6 +65,8 @@ def cached(ttl: int = 300, prefix: str = "cache"):
             try:
                 if result:
                     # Use jsonable_encoder to ensure Pydantic/SQLAlchemy objects are serializable
+                    # We use a try-except here because complex SQLAlchemy models with cycles
+                    # can cause recursion depth errors in jsonable_encoder.
                     serialized_data = json.dumps(jsonable_encoder(result))
                     await r.setex(
                         full_key,
@@ -72,7 +74,8 @@ def cached(ttl: int = 300, prefix: str = "cache"):
                         serialized_data
                     )
             except Exception as e:
-                print(f"Cache write error: {e}")
+                # If serialization fails, we still return the result, just don't cache it
+                print(f"Cache write error (skipping cache): {e}")
 
             return result
         return wrapper
